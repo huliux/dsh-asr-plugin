@@ -6,8 +6,9 @@ Local meeting transcription for DeepSeek Harness on Apple Silicon macOS. Import
 WAV/M4A/MP3 or capture microphone and system audio, obtain timestamps and speaker
 labels, and explicitly reference meetings in DSH for Agent reading and export.
 
-**Preview:** experimental prereleases use npm's `next` tag. Check the repository's
-release page for available versions; preview limitations are listed below.
+**Preview:** experimental prereleases use npm's `next` tag. Check the npm package
+versions for availability; preview limitations are listed below. The source
+repository is not public during this npm-only preview.
 The qualified host is DSH 0.2.0-rc.2 with a Node 24 runtime. Other versions require
 acceptance. Microphone capture requires macOS 13.5+, system capture macOS 14.2+;
 those platform API minima are not a claim of testing every macOS release.
@@ -76,6 +77,10 @@ still supplies the meeting ID. Presentation support requires a host extension;
 this remains a known limitation.
 
 ## Build and contribute
+
+The source repository is currently private. The commands and source-document links
+below apply to maintainers with source access; a public source release is a separate
+step. npm installation does not require building from source.
 
 Install Node 24, pinned pnpm and Apple Command Line Tools. Reproducible native
 hashes are currently qualified with Apple clang 17 / macOS SDK 26. Verify the

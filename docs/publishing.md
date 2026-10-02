@@ -43,8 +43,10 @@ even when weights are unchanged.
 
 Prepare source/code release assets and their SHA-256 checksums in a private draft.
 Check the uploaded files by downloading and hashing them before the publication
-decision. A private draft is not a public endpoint. After approval, publish the
-reviewed source and release; no project-hosted model endpoint is required.
+decision. A private draft is not a public endpoint. Source visibility, Release publication and npm upload are separate decisions.
+For the initial npm-only preview, keep the source repository and Release draft
+private and publish only the qualified npm package. No project-hosted model
+endpoint is required.
 
 ## Account and registry
 
