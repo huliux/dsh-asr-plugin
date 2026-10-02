@@ -6,19 +6,21 @@ Local meeting transcription for DeepSeek Harness on Apple Silicon macOS. Import
 WAV/M4A/MP3 or capture microphone and system audio, obtain timestamps and speaker
 labels, and explicitly reference meetings in DSH for Agent reading and export.
 
-**Release status:** candidate source; the npm package and project model downloads
-are not published. Source availability does not certify a public product release.
+**Preview:** experimental prereleases use npm's `next` tag. Check the repository's
+release page for available versions; preview limitations are listed below.
 The qualified host is DSH 0.2.0-rc.2 with a Node 24 runtime. Other versions require
 acceptance. Microphone capture requires macOS 13.5+, system capture macOS 14.2+;
 those platform API minima are not a claim of testing every macOS release.
 
 ## Installation and first use
 
-Use DSH's native Plugins page or profile CLI. Once a release is published, the
-package name is `@huliux/dsh-asr-plugin`; do not assume registry installation is
-already available. For a supplied, checksum-verified local candidate:
+Use DSH's native Plugins page with `@huliux/dsh-asr-plugin@next`, or the profile CLI
+with an exact published version. A checksum-verified local release package is an
+alternative input:
 
 ```sh
+dsh plugin --profile PROFILE add --ignore-scripts @huliux/dsh-asr-plugin@VERSION
+# Alternative: verified release package.
 dsh plugin --profile PROFILE add --ignore-scripts /absolute/path/plugin.tgz
 ```
 
@@ -35,7 +37,8 @@ enables hf-mirror.com after direct failures; a custom HTTP/HTTPS proxy is also
 available. Save connection changes before downloading. See [model assets](docs/model-assets.md)
 for source coverage and proxy limitations.
 
-Downloads use pinned upstream revisions and verify sizes/SHA-256 before atomic
+Models download directly from pinned ModelScope/Hugging Face sources; GitHub
+Releases do not contain model weights. Downloads verify sizes/SHA-256 before atomic
 installation. No model download starts merely by enabling the plugin. You can
 cancel, retry, or reopen the page to observe the Host task. Installing punctuation
 does not enable it: valid assets and an explicit save are required. Missing or
@@ -62,10 +65,15 @@ to read, compare or export it; file writes use DSH Approval. Meetings are global
 plugin facts, not session/workspace attachments. Processing is local after model
 preparation; LLM use follows the host's selected provider and policy.
 
-Current host limitation: a meeting reference can display its internal link in sent
+## Known preview limitations
+
+- Three fixed model weights do not yet have verified copies on both providers.
+  Existing sources work, but a source outage may require retrying later or building
+  a matching local archive. Same-named weights cannot be substituted.
+- A meeting reference can display its internal link in sent
 message history. The picker and composer show the meeting label, and the reference
 still supplies the meeting ID. Presentation support requires a host extension;
-source availability does not imply that this limitation is resolved.
+this remains a known limitation.
 
 ## Build and contribute
 

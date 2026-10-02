@@ -38,7 +38,8 @@ source/signature success is distinct from non-silent capture/permission evidence
 
 Before releasing, record the exact package/model hashes and inventory, perform
 secret/private-content scanning and validate the real installation/client/model/
-recording/permission paths. Publishing source, models and npm are separate actions.
+recording/permission paths. Publishing source and npm are separate actions; model weights download from pinned
+upstream sources and stay out of GitHub Releases.
 Do not publish a candidate solely because engineering tests pass.
 
 The optional Developer ID strategy uses neutral example publisher constants in

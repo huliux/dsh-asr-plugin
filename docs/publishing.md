@@ -25,20 +25,26 @@ The development manifest intentionally retains `private: true`.
 The intended source repository is `huliux/dsh-asr-plugin`. Start its public history
 from the reviewed source tree, retaining licenses and future development guidance.
 Do not push the development checkout's history. Generated binaries belong in the
-npm package; model weights belong in separate release assets.
+npm package. Model weights download directly from pinned upstream providers and
+are not uploaded to GitHub Releases.
 
-Prepare the base and optional punctuation archives with this version's own legal
-materials. Include their SHA-256 checksums and exact byte sizes with the release.
-Unchanged weight fingerprints do not make an older code-paired archive compatible.
-Stage each exact archive using the installed candidate's asset CLI, run doctor,
-and exercise base-only, both-installed/base-selected, and enhanced modes.
+Qualify settings-page downloads against the fixed source inventory and installed
+asset checks. Preserve source licenses and SHA-256 verification. Three weights
+currently lack complete cross-provider coverage; record this as a known preview
+limitation rather than claiming universal automatic fallback. Historical messages
+can also show internal meeting links while identity/reference/export remain usable.
+These limitations are accepted for the first preview and remain tracked.
 
-Create source/model endpoints only after reviewing their actual contents and the
-publication decision. Until uploaded, local receipts and planned URLs are not live
-download entries. Verify the uploaded assets by downloading and hashing them before
-linking them from user-facing release instructions. Settings-page downloads still
-use the individually pinned upstream routes; a project archive is a manual install
-alternative, not evidence of complete automatic cross-site coverage.
+Local base and punctuation archives are developer/offline alternatives. Build them
+with this version's legal material, stage each exact archive, run doctor and exercise
+base-only, both-installed/base-selected and enhanced modes. Do not upload these
+local archives as release assets. An older code-paired archive can be incompatible
+even when weights are unchanged.
+
+Prepare source/code release assets and their SHA-256 checksums in a private draft.
+Check the uploaded files by downloading and hashing them before the publication
+decision. A private draft is not a public endpoint. After approval, publish the
+reviewed source and release; no project-hosted model endpoint is required.
 
 ## Account and registry
 

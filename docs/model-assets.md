@@ -5,6 +5,17 @@ optional set adds punctuation. src/assets/manifest.json defines exact bytes and
 SHA-256. src/assets/supply-chain.json records canonical upstream repositories,
 immutable revisions and license terms. Keep weights out of Git/npm code bundles.
 
+## Prepare models from settings
+
+Open the plugin configuration in DSH Plugins and download the required base set
+(about 278 MiB). Optional punctuation is about 274 MiB and requires explicit
+enablement after installation. Download progress, verification, installation,
+cancellation and retry are shown in the page. Models come directly from pinned
+ModelScope/Hugging Face sources; GitHub Releases do not host model weights.
+The downloader verifies each asset and uses the same atomic staging contract below.
+
+## Developer and offline preparation
+
 Schema-2 archives contain packKind, pack/model compatibility fingerprints, an
 asset inventory and code-paired legal material. stageModelPack validates archive
 members and extracted files before atomic promotion. Corrupt/incompatible or
@@ -21,7 +32,7 @@ dsh plugin --profile PROFILE exec dsh-asr-assets stage /absolute/path/punctuatio
 
 Use --data-dir with the same directory if the plugin has a custom data_dir.
 A raw user-selected model directory is never the runtime installation contract.
-Use the plugin version and checksums supplied with a project archive; do not mix
+Use the matching plugin version and checksums for a locally built archive; do not mix
 code-paired archives from another release. A valid installed model directory does
 not need to be replaced solely because archive legal metadata changes. If staging
 reports `MODEL_PACK_INCOMPATIBLE`, obtain a matching archive or use the configuration
