@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key>
+  <string>DSH Recorder</string>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleExecutable</key>
+  <string>DSHASRRecordingHelper</string>
+  <key>CFBundleIdentifier</key>
+  <string>com.bitbook.dsh-asr.recording-helper</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleName</key>
+  <string>DSH Recorder</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>0.1.0</string>
+  <key>CFBundleVersion</key>
+  <string>1</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>13.5</string>
+  <key>LSUIElement</key>
+  <true/>
+  <key>NSAudioCaptureUsageDescription</key>
+  <string>Record sound playing on your computer and transcribe it locally. You can turn system audio off at any time.</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Record your voice and transcribe it locally. You can turn the microphone off at any time.</string>
+</dict>
+</plist>

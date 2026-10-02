@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": []
+  },
+  "include": [
+    "src/client/**/*.ts",
+    "src/client/**/*.tsx",
+    "src/recording/rpc-contract.ts",
+    "tests/client/**/*.ts",
+    "tests/client/**/*.tsx"
+  ],
+  "exclude": ["dist", "node_modules"]
+}

@@ -1,0 +1,4 @@
+"CFBundleDisplayName" = "DSH 录音助手";
+"CFBundleName" = "DSH 录音助手";
+"NSMicrophoneUsageDescription" = "录制你的声音，用于本地转写。你可以随时关闭麦克风。";
+"NSAudioCaptureUsageDescription" = "录制电脑播放的声音，用于本地转写。你可以随时关闭系统音频。";

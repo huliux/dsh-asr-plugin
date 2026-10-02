@@ -1,0 +1,4 @@
+"CFBundleDisplayName" = "DSH Recorder";
+"CFBundleName" = "DSH Recorder";
+"NSMicrophoneUsageDescription" = "Record your voice and transcribe it locally. You can turn the microphone off at any time.";
+"NSAudioCaptureUsageDescription" = "Record sound playing on your computer and transcribe it locally. You can turn system audio off at any time.";

@@ -1,0 +1,328 @@
+{
+  "schemaVersion": 1,
+  "assets": [
+    {
+      "id": "vad-model",
+      "sourceMode": "reuse",
+      "canonicalRepository": "https://huggingface.co/onnx-community/pyannote-segmentation-3.0",
+      "revision": "733a93b6473d019a773298e08cefa686894b1854",
+      "sourcePath": "onnx/model.onnx",
+      "license": "MIT",
+      "licenseFiles": [
+        "third_party/licenses/MIT-CNRS.txt"
+      ],
+      "attribution": "pyannote segmentation 3.0, Copyright (c) 2023 CNRS; ONNX conversion by onnx-community from pyannote/segmentation-3.0@e66f3d3b9eb0873085418a7b813d3b369bf160bb; model bytes unchanged and repackaged.",
+      "distribution": "public",
+      "transports": [
+        {
+          "kind": "canonical",
+          "url": "https://huggingface.co/onnx-community/pyannote-segmentation-3.0/resolve/733a93b6473d019a773298e08cefa686894b1854/onnx/model.onnx"
+        },
+        {
+          "kind": "cn-mirror",
+          "url": "https://hf-mirror.com/onnx-community/pyannote-segmentation-3.0/resolve/733a93b6473d019a773298e08cefa686894b1854/onnx/model.onnx"
+        }
+      ]
+    },
+    {
+      "id": "speaker-embedding-model",
+      "sourceMode": "reuse",
+      "canonicalRepository": "https://huggingface.co/Wespeaker/wespeaker-voxceleb-resnet34-LM",
+      "revision": "f0c48c298fd835726c27956a5d617bad7115627e",
+      "sourcePath": "voxceleb_resnet34_LM.onnx",
+      "license": "CC-BY-4.0",
+      "licenseFiles": [
+        "third_party/licenses/CC-BY-4.0.md"
+      ],
+      "attribution": "WeSpeaker VoxCeleb ResNet34-LM trained on VoxCeleb2 Dev; model bytes unchanged and renamed to embedding.onnx for delivery.",
+      "citations": [
+        "Hongji Wang et al. “WeSpeaker: A research and production oriented speaker embedding learning toolkit.” ICASSP 2023, pp. 1–5. https://arxiv.org/abs/2210.17016",
+        "Hossein Zeinali et al. “BUT system description to VoxCeleb speaker recognition challenge 2019.” arXiv:1910.12592. https://arxiv.org/abs/1910.12592"
+      ],
+      "distribution": "public",
+      "transports": [
+        {
+          "kind": "canonical",
+          "url": "https://huggingface.co/Wespeaker/wespeaker-voxceleb-resnet34-LM/resolve/f0c48c298fd835726c27956a5d617bad7115627e/voxceleb_resnet34_LM.onnx"
+        },
+        {
+          "kind": "cn-mirror",
+          "url": "https://hf-mirror.com/Wespeaker/wespeaker-voxceleb-resnet34-LM/resolve/f0c48c298fd835726c27956a5d617bad7115627e/voxceleb_resnet34_LM.onnx"
+        },
+        {
+          "kind": "fallback",
+          "url": "https://modelscope.cn/api/v1/models/manyeyes/speaker_recognition_task_models_onnx_collection/repo?Revision=62cc6fed28b3413dd6351898a6fc5a5f616f5d8e&FilePath=wespeaker_en_voxceleb_resnet34_LM.onnx"
+        }
+      ]
+    },
+    {
+      "id": "asr-config",
+      "sourceMode": "reuse",
+      "canonicalRepository": "https://modelscope.cn/models/iic/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-onnx",
+      "revision": "99321729a5c7b38be579ead523bac68804573bd3",
+      "sourcePath": "config.yaml",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "attribution": "Alibaba DAMO Academy, IIC and FunASR Paraformer ONNX; bytes unchanged.",
+      "distribution": "public",
+      "transports": [
+        {
+          "kind": "canonical",
+          "url": "https://modelscope.cn/api/v1/models/iic/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-onnx/repo?Revision=99321729a5c7b38be579ead523bac68804573bd3&FilePath=config.yaml"
+        },
+        {
+          "kind": "fallback",
+          "url": "https://huggingface.co/Haujet/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-onnx/resolve/72b5a81d56d23bb0480b28b3181bfab5be712c0d/config.yaml"
+        }
+      ]
+    },
+    {
+      "id": "asr-cmvn",
+      "sourceMode": "reuse",
+      "canonicalRepository": "https://modelscope.cn/models/iic/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-onnx",
+      "revision": "99321729a5c7b38be579ead523bac68804573bd3",
+      "sourcePath": "am.mvn",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "attribution": "Alibaba DAMO Academy, IIC and FunASR Paraformer ONNX; bytes unchanged.",
+      "distribution": "public",
+      "transports": [
+        {
+          "kind": "canonical",
+          "url": "https://modelscope.cn/api/v1/models/iic/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-onnx/repo?Revision=99321729a5c7b38be579ead523bac68804573bd3&FilePath=am.mvn"
+        },
+        {
+          "kind": "fallback",
+          "url": "https://huggingface.co/Haujet/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-onnx/resolve/72b5a81d56d23bb0480b28b3181bfab5be712c0d/am.mvn"
+        }
+      ]
+    },
+    {
+      "id": "asr-model",
+      "sourceMode": "reuse",
+      "canonicalRepository": "https://modelscope.cn/models/iic/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-onnx",
+      "revision": "99321729a5c7b38be579ead523bac68804573bd3",
+      "sourcePath": "model_quant.onnx",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "attribution": "Alibaba DAMO Academy, IIC and FunASR Paraformer ONNX; bytes unchanged.",
+      "distribution": "public",
+      "transports": [
+        {
+          "kind": "canonical",
+          "url": "https://modelscope.cn/api/v1/models/iic/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-onnx/repo?Revision=99321729a5c7b38be579ead523bac68804573bd3&FilePath=model_quant.onnx"
+        }
+      ]
+    },
+    {
+      "id": "asr-tokens",
+      "sourceMode": "reuse",
+      "canonicalRepository": "https://modelscope.cn/models/iic/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-onnx",
+      "revision": "99321729a5c7b38be579ead523bac68804573bd3",
+      "sourcePath": "tokens.json",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "attribution": "Alibaba DAMO Academy, IIC and FunASR Paraformer ONNX; bytes unchanged.",
+      "distribution": "public",
+      "transports": [
+        {
+          "kind": "canonical",
+          "url": "https://modelscope.cn/api/v1/models/iic/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-onnx/repo?Revision=99321729a5c7b38be579ead523bac68804573bd3&FilePath=tokens.json"
+        },
+        {
+          "kind": "fallback",
+          "url": "https://huggingface.co/Haujet/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-onnx/resolve/72b5a81d56d23bb0480b28b3181bfab5be712c0d/tokens.json"
+        }
+      ]
+    },
+    {
+      "id": "punc-config",
+      "sourceMode": "reuse",
+      "canonicalRepository": "https://modelscope.cn/models/iic/punc_ct-transformer_zh-cn-common-vocab272727-onnx",
+      "revision": "8f239ff78c6267c4d859233e7eb3bbdb68c61824",
+      "sourcePath": "config.yaml",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "attribution": "Alibaba DAMO Academy, IIC and FunASR CT-Transformer punctuation ONNX; bytes unchanged.",
+      "citations": [
+        "Qian Chen, Mengzhe Chen, Bo Li, and Wen Wang. “Controllable Time-Delay Transformer for Real-Time Punctuation Prediction and Disfluency Detection.” ICASSP 2020, pp. 8069–8073."
+      ],
+      "distribution": "public",
+      "transports": [
+        {
+          "kind": "canonical",
+          "url": "https://modelscope.cn/api/v1/models/iic/punc_ct-transformer_zh-cn-common-vocab272727-onnx/repo?Revision=8f239ff78c6267c4d859233e7eb3bbdb68c61824&FilePath=config.yaml"
+        },
+        {
+          "kind": "fallback",
+          "url": "https://huggingface.co/lucasjin/punc_ct-transformer_zh-cn-common-vocab272727-pytorch/resolve/ac099bf061266095ed76777c3c12dda39393630a/config.yaml"
+        }
+      ]
+    },
+    {
+      "id": "punc-model",
+      "sourceMode": "reuse",
+      "canonicalRepository": "https://modelscope.cn/models/iic/punc_ct-transformer_zh-cn-common-vocab272727-onnx",
+      "revision": "8f239ff78c6267c4d859233e7eb3bbdb68c61824",
+      "sourcePath": "model_quant.onnx",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "attribution": "Alibaba DAMO Academy, IIC and FunASR CT-Transformer punctuation ONNX; bytes unchanged.",
+      "citations": [
+        "Qian Chen, Mengzhe Chen, Bo Li, and Wen Wang. “Controllable Time-Delay Transformer for Real-Time Punctuation Prediction and Disfluency Detection.” ICASSP 2020, pp. 8069–8073."
+      ],
+      "distribution": "public",
+      "transports": [
+        {
+          "kind": "canonical",
+          "url": "https://modelscope.cn/api/v1/models/iic/punc_ct-transformer_zh-cn-common-vocab272727-onnx/repo?Revision=8f239ff78c6267c4d859233e7eb3bbdb68c61824&FilePath=model_quant.onnx"
+        }
+      ]
+    },
+    {
+      "id": "punc-tokens",
+      "sourceMode": "reuse",
+      "canonicalRepository": "https://modelscope.cn/models/iic/punc_ct-transformer_zh-cn-common-vocab272727-onnx",
+      "revision": "8f239ff78c6267c4d859233e7eb3bbdb68c61824",
+      "sourcePath": "tokens.json",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "attribution": "Alibaba DAMO Academy, IIC and FunASR CT-Transformer punctuation ONNX; bytes unchanged.",
+      "citations": [
+        "Qian Chen, Mengzhe Chen, Bo Li, and Wen Wang. “Controllable Time-Delay Transformer for Real-Time Punctuation Prediction and Disfluency Detection.” ICASSP 2020, pp. 8069–8073."
+      ],
+      "distribution": "public",
+      "transports": [
+        {
+          "kind": "canonical",
+          "url": "https://modelscope.cn/api/v1/models/iic/punc_ct-transformer_zh-cn-common-vocab272727-onnx/repo?Revision=8f239ff78c6267c4d859233e7eb3bbdb68c61824&FilePath=tokens.json"
+        },
+        {
+          "kind": "fallback",
+          "url": "https://huggingface.co/lucasjin/punc_ct-transformer_zh-cn-common-vocab272727-pytorch/resolve/ac099bf061266095ed76777c3c12dda39393630a/tokens.json"
+        }
+      ]
+    },
+    {
+      "id": "fbank-native",
+      "sourceMode": "rebuild",
+      "canonicalRepository": "https://github.com/csukuangfj/kaldi-native-fbank",
+      "revision": "fdc395d24dc3e9e48ae1df4f0f6860f6b7d4870e",
+      "sourcePath": "kaldi-native-fbank/csrc",
+      "license": "Apache-2.0 AND MIT AND LicenseRef-Ooura-FFT",
+      "licenseFiles": [
+        "LICENSE",
+        "third_party/licenses/MIT-node-addon-api.md",
+        "third_party/licenses/Ooura-FFT.txt"
+      ],
+      "attribution": "kaldi-native-fbank v1.20.0 vendored C++ sources under Apache-2.0; project compatibility patch in mel-computations.cc; node-addon-api MIT headers; Takuya Ooura FFT source and notice retained.",
+      "distribution": "public",
+      "transports": [
+        {
+          "kind": "vendored-source"
+        }
+      ],
+      "buildTarget": {
+        "platform": "darwin",
+        "architecture": "arm64",
+        "napi": 10
+      }
+    },
+    {
+      "id": "hcluster-native",
+      "sourceMode": "rebuild",
+      "canonicalRepository": "https://github.com/kunji163/clerki",
+      "revision": "44887f62f7b1a69fcc9d23583aa8df8f11898aca",
+      "sourcePath": "hclust-cpp",
+      "license": "BSD-2-Clause AND MIT",
+      "licenseFiles": [
+        "third_party/licenses/BSD-2-Clause-Bitbook.txt",
+        "third_party/licenses/BSD-2-Clause-fastcluster.txt",
+        "third_party/licenses/MIT-node-addon-api.md"
+      ],
+      "attribution": "Bitbook wrapper Copyright (c) 2024 Max Bain; fastcluster from cdalitz/hclust-cpp@d48fff6bba1199d80422cd37f5b635107a5a0c92, Copyright 2011 Daniel Müllner and 2018-2020 Christoph Dalitz; node-addon-api MIT headers; stderr fallback modified.",
+      "distribution": "public",
+      "transports": [
+        {
+          "kind": "vendored-source"
+        }
+      ],
+      "buildTarget": {
+        "platform": "darwin",
+        "architecture": "arm64",
+        "napi": 8
+      }
+    }
+  ],
+  "dependencies": [
+    {
+      "id": "onnxruntime-node",
+      "sourceMode": "reuse",
+      "canonicalRepository": "https://github.com/microsoft/onnxruntime",
+      "revision": "ffceed9d44f2f3efb9dd69fa75fea51163c91d91",
+      "sourcePath": "js/node",
+      "license": "MIT",
+      "licenseFiles": [
+        "third_party/onnxruntime/LICENSE"
+      ],
+      "attribution": "Microsoft ONNX Runtime; upstream LICENSE and ThirdPartyNotices.txt are required with redistribution.",
+      "distribution": "public",
+      "transports": [
+        {
+          "kind": "npm",
+          "url": "https://registry.npmjs.org/onnxruntime-node/-/onnxruntime-node-1.19.2.tgz"
+        }
+      ],
+      "packageName": "onnxruntime-node",
+      "version": "1.19.2",
+      "integrity": "sha512-9eHMP/HKbbeUcqte1JYzaaRC8JPn7ojWeCeoyShO86TOR97OCyIyAIOGX3V95ErjslVhJRXY8Em/caIUc0hm1Q==",
+      "runtime": {
+        "platform": "darwin",
+        "architecture": "arm64",
+        "nodeMajor": 24,
+        "addonNapi": 3,
+        "verifiedNapi": 10
+      },
+      "artifacts": [
+        {
+          "path": "bin/napi-v3/darwin/arm64/onnxruntime_binding.node",
+          "byteLength": 193045,
+          "sha256": "2505583e3d5470944bd981f9ac352daa9f94d8639d7dc913382f587bb77c767e"
+        },
+        {
+          "path": "bin/napi-v3/darwin/arm64/libonnxruntime.1.19.2.dylib",
+          "byteLength": 26090520,
+          "sha256": "183dca3132c8f0e2f0a1a30da3bcf7dee634cd6a7d5bf99b47f3d7ffe2791799"
+        }
+      ],
+      "noticeFiles": [
+        {
+          "path": "LICENSE",
+          "deliveryPath": "third_party/onnxruntime/LICENSE",
+          "byteLength": 1073,
+          "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c"
+        },
+        {
+          "path": "ThirdPartyNotices.txt",
+          "deliveryPath": "third_party/onnxruntime/ThirdPartyNotices.txt",
+          "byteLength": 338538,
+          "sha256": "cf7342f7ba482ef715ae58f5f497a8d3564fa255164175aea324cd293c5701a0"
+        }
+      ]
+    }
+  ]
+}

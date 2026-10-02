@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.client.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist/client-types",
+    "rootDir": "src"
+  },
+  "include": [
+    "src/client/**/*.ts",
+    "src/client/**/*.tsx",
+    "src/recording/rpc-contract.ts"
+  ]
+}

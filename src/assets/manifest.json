@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 2,
+  "algorithmRevision": "p1c-recording-v4-base-segmentation",
+  "assets": [
+    {
+      "id": "vad-model",
+      "kind": "model",
+      "relativePath": "models/vad/model.onnx",
+      "byteLength": 5986908,
+      "sha256": "057ee564753071c0b09b5b611648b50ac188d50846bff5f01e9f7bbf1591ea25"
+    },
+    {
+      "id": "speaker-embedding-model",
+      "kind": "model",
+      "relativePath": "models/speaker/embedding.onnx",
+      "byteLength": 26530309,
+      "sha256": "7bb2f06e9df17cdf1ef14ee8a15ab08ed28e8d0ef5054ee135741560df2ec068"
+    },
+    {
+      "id": "asr-config",
+      "kind": "config",
+      "relativePath": "models/asr/config.yaml",
+      "byteLength": 2899,
+      "sha256": "4f35265cc3c6dd906a2668b62847183e441310d82df6438bace9b8f6dab3bf7d"
+    },
+    {
+      "id": "asr-cmvn",
+      "kind": "config",
+      "relativePath": "models/asr/am.mvn",
+      "byteLength": 11203,
+      "sha256": "29b3c740a2c0cfc6b308126d31d7f265fa2be74f3bb095cd2f143ea970896ae5"
+    },
+    {
+      "id": "asr-model",
+      "kind": "model",
+      "relativePath": "models/asr/model_quant.onnx",
+      "byteLength": 258356009,
+      "sha256": "80fa5c8a87f5ae77ea2dc233ad220b9415343c8681d538e59f019f2acc837694"
+    },
+    {
+      "id": "asr-tokens",
+      "kind": "tokens",
+      "relativePath": "models/asr/tokens.json",
+      "byteLength": 93676,
+      "sha256": "2b20c2b12572d682afff84ce1c8d560f67b8b32a4c1f21567411d141ed352127"
+    },
+    {
+      "id": "punc-config",
+      "kind": "config",
+      "relativePath": "models/punc/config.yaml",
+      "byteLength": 810,
+      "sha256": "a56ec10925b06fa976ad51af373396be2b13e1eb8dc62a5426b5adebaba7071d"
+    },
+    {
+      "id": "punc-model",
+      "kind": "model",
+      "relativePath": "models/punc/model_quant.onnx",
+      "byteLength": 282752912,
+      "sha256": "e6cd8399bf7d0e75f8d9af4a107310e1968ecab1d50135e765b8f0265b27a83d"
+    },
+    {
+      "id": "punc-tokens",
+      "kind": "tokens",
+      "relativePath": "models/punc/tokens.json",
+      "byteLength": 4207480,
+      "sha256": "c960ab87bccea4aa15cf49a59f71973c2c330b46668048cd8da253749ec71ee3"
+    },
+    {
+      "id": "fbank-native",
+      "kind": "native",
+      "relativePath": "native/darwin-arm64/fbank.node",
+      "byteLength": 141448,
+      "sha256": "62c2b1077eefaa9ada40a9fdc4b8e6a0bfd248084336be130310dab7f57c4438",
+      "runtime": {
+        "platform": "darwin",
+        "architecture": "arm64",
+        "nodeMajor": 24,
+        "napi": 10
+      }
+    },
+    {
+      "id": "hcluster-native",
+      "kind": "native",
+      "relativePath": "native/darwin-arm64/hcluster.node",
+      "byteLength": 131536,
+      "sha256": "ebc22050bd12065c9fb03d90ed7ed39b481edb65559cedd88af80200c8e63688",
+      "runtime": {
+        "platform": "darwin",
+        "architecture": "arm64",
+        "nodeMajor": 24,
+        "napi": 10
+      }
+    }
+  ]
+}

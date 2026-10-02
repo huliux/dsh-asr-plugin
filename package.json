@@ -1,0 +1,188 @@
+{
+  "name": "@huliux/dsh-asr-plugin",
+  "version": "0.1.0-alpha.18",
+  "license": "Apache-2.0",
+  "type": "module",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public",
+    "tag": "next",
+    "executableFiles": [
+      "dist/recording-helper/DSHASRRecordingHelper.app/Contents/MacOS/DSHASRRecordingHelper",
+      "dist/recording-helper/DSHASRRecordingHelper.app/Contents/Helpers/dsh-asr-capture-mic",
+      "dist/recording-helper/DSHASRRecordingHelper.app/Contents/Helpers/dsh-asr-capture-system"
+    ]
+  },
+  "bin": {
+    "dsh-asr-assets": "./dist/cli/dsh-asr-assets.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client-types/client/index.d.ts",
+      "default": "./dist/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!dist/maintenance/**",
+    "!dist/probes/**",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "third_party",
+    "README.zh-CN.md"
+  ],
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-input-trigger",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-workspace",
+        "@deepseek-ai/dsh-client-ui-plugin-manager",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ],
+      "platform": "web"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=24.0.0 <25"
+  },
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@deepseek-ai/dsh-subprocess-local",
+      "koffi",
+      "node-pty"
+    ]
+  },
+  "scripts": {
+    "build": "node scripts/clean-build.mjs && tsc -p tsconfig.build.json && tsc -p tsconfig.client.build.json && tsdown --config tsdown.config.ts && node scripts/copy-build-assets.mjs",
+    "build:closed-pilot": "pnpm run build && node scripts/materialize-closed-pilot-natives.mjs && node scripts/build-recording-helper.mjs --public-release && node scripts/verify-closed-pilot-pack.mjs",
+    "build:model-pack": "pnpm run build && node scripts/build-model-pack.mjs",
+    "build:native:fbank": "node scripts/build-fbank.mjs",
+    "build:native:hcluster": "node scripts/build-hcluster.mjs",
+    "build:native:recording-helper": "node scripts/build-recording-helper.mjs",
+    "check": "pnpm run typecheck && pnpm run test && pnpm run build",
+    "probe:p0-01": "DSH_RUN_NATIVE_ADAPTERS=1 vitest run tests/integration/native-adapters.spec.ts",
+    "probe:p0-02": "pnpm run build && node scripts/probe-vad.mjs",
+    "probe:p0-03": "pnpm run build && node scripts/probe-funasr.mjs",
+    "probe:p0-04": "pnpm run build && node scripts/probe-diarization.mjs",
+    "probe:p0-05": "pnpm run build && node scripts/probe-workers.mjs data/p0-wav/worker-smoke.wav",
+    "probe:p0-05:payload": "pnpm run build && node scripts/probe-worker-payload.mjs",
+    "probe:p0-05:cancel": "pnpm run build && node scripts/probe-worker-cancellation.mjs data/p0-wav/worker-smoke.wav",
+    "probe:p0-07:config": "node scripts/probe-dsh-config.mjs",
+    "probe:p0-07": "pnpm run build && pnpm run probe:p0-07:config && DSH_RUN_DSH_ASSEMBLED=1 vitest run tests/integration/dsh-assembled.spec.ts",
+    "probe:native:fbank": "pnpm run build:native:fbank && DSH_RUN_FBANK_REBUILD=1 vitest run tests/integration/fbank-rebuild.spec.ts",
+    "probe:native:recording-helper": "pnpm run build:native:recording-helper && DSH_RUN_RECORDING_HELPER_REBUILD=1 vitest run tests/integration/recording-helper-rebuild.spec.ts",
+    "probe:native:recording-helper:release": "pnpm run build:closed-pilot && DSH_RUN_PUBLIC_HELPER_RELEASE=1 vitest run tests/integration/public-recording-helper-release.spec.ts",
+    "probe:p1a-02": "DSH_RUN_MANAGED_AUDIO_REAL=1 vitest run tests/integration/managed-audio-real.spec.ts",
+    "probe:p1a-04": "pnpm run build:closed-pilot && DSH_RUN_P1A_APPLICATION_REAL=1 vitest run tests/integration/meeting-application-real.spec.ts",
+    "probe:p1a-05": "pnpm run build:closed-pilot && node scripts/probe-host-restart.mjs && vitest run tests/integration/meeting-application-lifecycle.spec.ts",
+    "probe:p1a-06": "pnpm run build:closed-pilot && DSH_RUN_P1A_PLUGIN_BUILT=1 vitest run tests/integration/plugin-assembly.spec.ts tests/integration/meeting-tools.spec.ts",
+    "probe:p1a": "pnpm run build:closed-pilot && node scripts/prepare-p1a-fixtures.mjs && DSH_RUN_P1A_PLUGIN_BUILT=1 DSH_RUN_P1A_E2E=1 vitest run tests/integration/plugin-assembly.spec.ts tests/integration/meeting-tools.spec.ts tests/integration/p1a-e2e.spec.ts && node scripts/probe-host-restart.mjs && vitest run tests/integration/meeting-application-lifecycle.spec.ts",
+    "probe:p1b-01:sources": "pnpm run build && node scripts/probe-public-assets.mjs",
+    "probe:p1b-03": "pnpm run build && node scripts/probe-data-root-lease.mjs",
+    "probe:p1b": "pnpm run build:closed-pilot && node scripts/probe-p1b.mjs",
+    "probe:p1c": "node scripts/probe-p1c.mjs",
+    "probe:mre04:disk-full": "DSH_RUN_EXPORT_DISK_FULL=1 vitest run tests/integration/transcript-export-disk-full-real.spec.ts",
+    "stage:assets": "pnpm run build && node scripts/stage-assets.mjs",
+    "test": "vitest run --passWithNoTests",
+    "test:workers:real": "pnpm run build && DSH_RUN_WORKERS=1 vitest run tests/integration/workers-real.spec.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.client.json --noEmit"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "4.0.4",
+    "@deepseek-ai/cordis-plugin-include": "1.0.9",
+    "@deepseek-ai/cordis-plugin-loader": "1.0.5",
+    "@deepseek-ai/dsh-agent": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-api-session-controller": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-api-workspace-controller": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-connection": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-locale": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-store": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-conversation": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-input-trigger": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-layout": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-plugin-manager": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-renderer": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-session": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-settings": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-workspace": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-invariants": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-jobs": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-jobs-local": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-llm": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-session": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-subprocess": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-subprocess-local": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-system-prompt": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-timeout": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-tool-jobs": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-user-approval": "0.2.0-rc.2",
+    "@tsdown/css": "0.21.5",
+    "@types/node": "^22.20.0",
+    "@types/react": "18.3.28",
+    "node-addon-api": "8.5.0",
+    "node-gyp": "10.3.1",
+    "onnxruntime-common": "1.19.2",
+    "react": "18.3.1",
+    "tsdown": "0.21.5",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-home-paths": "0.2.0-rc.2",
+    "@deepseek-ai/schemastery": "3.18.4",
+    "onnxruntime-node": "1.19.2"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.4",
+    "@deepseek-ai/dsh-api-session-controller": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-connection": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-locale": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-conversation": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-input-trigger": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-layout": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-plugin-manager": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-renderer": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-settings": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-workspace": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-jobs": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-llm": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-subprocess": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/huliux/dsh-asr-plugin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/huliux/dsh-asr-plugin/issues"
+  }
+}
