@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.2 — Unreleased
+## 0.1.2 — 2026-10-07
 
 - Link the npm package to its public source, documentation and issue tracker;
   add discovery keywords and installation/verification guidance in both languages.

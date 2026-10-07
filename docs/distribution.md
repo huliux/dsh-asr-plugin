@@ -11,7 +11,7 @@ Use the DSH Plugins page, or install the documented stable version into your
 chosen Web profile:
 
 ```sh
-dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.1
+dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.2
 ```
 
 Published packages contain the compiled client, native add-ons and signed
@@ -29,13 +29,14 @@ approval; follow the [recording guidance](../README.md#recording-and-meeting-acc
 
 ## GitHub package downloads
 
-[GitHub Releases](https://github.com/huliux/dsh-asr-plugin/releases) can provide
+[GitHub Releases](https://github.com/huliux/dsh-asr-plugin/releases) provide
 the same qualified `.tgz` uploaded to npm, with `SHA256SUMS` and release notes.
 Choose an attached package archive. GitHub's automatic source ZIP/tar downloads
 require the [complete build](development.md); they omit compiled recording assets.
 
-When package attachments are available, download the archive and `SHA256SUMS`
-from the same release into one directory, verify them, and install the absolute
+Download the [0.1.2 package](https://github.com/huliux/dsh-asr-plugin/releases/download/v0.1.2/huliux-dsh-asr-plugin-0.1.2.tgz)
+and [SHA256SUMS](https://github.com/huliux/dsh-asr-plugin/releases/download/v0.1.2/SHA256SUMS)
+into one directory, verify them, and install the absolute
 local archive path into your selected profile:
 
 ```sh

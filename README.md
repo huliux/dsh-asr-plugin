@@ -30,7 +30,7 @@ Install `@huliux/dsh-asr-plugin` from the DSH Plugins page. Web profiles also
 support the CLI:
 
 ```sh
-dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.1
+dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.2
 ```
 
 The package includes native add-ons and an ad-hoc signed recording Helper.

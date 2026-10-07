@@ -28,7 +28,7 @@ Windows、Linux 和 Intel Mac 不受支持。
 在 DSH 插件页安装 `@huliux/dsh-asr-plugin`。Web 配置也支持命令行安装：
 
 ```sh
-dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.1
+dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.2
 ```
 
 安装包包含原生模块和采用 ad-hoc 签名的录音 Helper。Helper 未经过 Apple
