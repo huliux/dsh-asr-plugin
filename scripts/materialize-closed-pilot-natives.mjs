@@ -14,7 +14,8 @@ try {
   process.stdout.write(`${JSON.stringify(report)}\n`);
 } catch (error) {
   const failure = error instanceof ClosedPilotNativeReleaseError
-    ? { code: error.code, ...(error.assetId === undefined ? {} : { assetId: error.assetId }) }
+    ? { code: error.code, message: error.message,
+      ...(error.assetId === undefined ? {} : { assetId: error.assetId }) }
     : { code: "RELEASE_BUILD_FAILED" };
   process.stderr.write(`${JSON.stringify(failure)}\n`);
   process.exitCode = 1;

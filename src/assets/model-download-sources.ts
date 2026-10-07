@@ -1,4 +1,4 @@
-import { ModelDownloadError, modelProxyUrl } from "./model-download-contract.js";
+import { ModelDownloadError, customModelProxy } from "./model-download-contract.js";
 import type { ModelDownloadSettings } from "./model-download-contract.js";
 import type { SupplyChainAsset } from "./supply-chain.js";
 
@@ -10,15 +10,10 @@ export function modelDownloadSources(source: SupplyChainAsset, settings: ModelDo
     .filter(url => ["modelscope.cn", "huggingface.co"].includes(new URL(url).hostname));
   const domestic = urls.filter(url => new URL(url).hostname === "modelscope.cn");
   const upstream = urls.filter(url => new URL(url).hostname === "huggingface.co");
-  const candidates: ModelDownloadSource[] = [...domestic, ...upstream].map(url => ({ url }));
-  if (settings.route === "proxy") {
-    for (const url of upstream) {
-      if (settings.proxyKind === "mirror") {
-        const mirror = new URL(url); mirror.hostname = "hf-mirror.com";
-        candidates.push({ url: mirror.href });
-      } else candidates.push({ url, proxyUrl: modelProxyUrl(settings.proxyUrl) });
-    }
-  }
+  const mirrors = upstream.map(url => { const mirror = new URL(url); mirror.hostname = "hf-mirror.com"; return mirror.href; });
+  const candidates: ModelDownloadSource[] = [...domestic, ...mirrors, ...upstream].map(url => ({ url }));
+  const proxyUrl = customModelProxy(settings);
+  if (proxyUrl !== undefined) candidates.push(...upstream.map(url => ({ url, proxyUrl })));
   if (candidates.length === 0) throw new ModelDownloadError("MODEL_DOWNLOAD_SOURCE_INVALID");
   return candidates;
 }

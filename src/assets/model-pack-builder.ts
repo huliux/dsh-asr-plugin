@@ -41,6 +41,7 @@ export interface BuildModelPackInput {
   readonly modelRoot: string;
   readonly outputPath: string;
   readonly packageRoot: string;
+  readonly signal?: AbortSignal;
 }
 
 export interface BuildModelPackResult {
@@ -59,16 +60,18 @@ function failInvalid(message: string): never {
   return failModelPackBuildInvalid(message);
 }
 
-async function hashFile(handle: FileHandle, byteLength: number, assetId: string): Promise<string> {
+async function hashFile(handle: FileHandle, byteLength: number, assetId: string, signal?: AbortSignal): Promise<string> {
   const hash = createHash("sha256");
   let position = 0;
   while (position < byteLength) {
+    signal?.throwIfAborted();
     const chunk = Buffer.allocUnsafe(Math.min(1_024 * 1_024, byteLength - position));
     const { bytesRead } = await handle.read(chunk, 0, chunk.byteLength, position);
     if (bytesRead === 0) break;
     hash.update(chunk.subarray(0, bytesRead));
     position += bytesRead;
   }
+  signal?.throwIfAborted();
   if (position !== byteLength) {
     throw new AssetVerificationError(
       "ASSET_SIZE_MISMATCH",
@@ -100,7 +103,7 @@ async function openRegularFile(path: string, assetId: string): Promise<FileHandl
   return handle;
 }
 
-async function openModelFile(root: string, asset: AssetRecord): Promise<OpenModelPackFile> {
+async function openModelFile(root: string, asset: AssetRecord, signal?: AbortSignal): Promise<OpenModelPackFile> {
   await assertAssetPathDirectories(root, asset);
   const handle = await openRegularFile(resolveAssetPath(root, asset), asset.id);
   try {
@@ -112,7 +115,7 @@ async function openModelFile(root: string, asset: AssetRecord): Promise<OpenMode
         asset.id,
       );
     }
-    const sha256 = await hashFile(handle, file.size, asset.id);
+    const sha256 = await hashFile(handle, file.size, asset.id, signal);
     if (sha256 !== asset.sha256) {
       throw new AssetVerificationError(
         "ASSET_HASH_MISMATCH",
@@ -159,11 +162,11 @@ async function collectThirdPartyFiles(root: string, relativeDirectory: string): 
   return files;
 }
 
-async function openMaterial(packageRoot: string, relativePath: string): Promise<OpenModelPackFile> {
+async function openMaterial(packageRoot: string, relativePath: string, signal?: AbortSignal): Promise<OpenModelPackFile> {
   const handle = await openRegularFile(join(packageRoot, relativePath), relativePath);
   try {
     const file = await handle.stat();
-    const sha256 = await hashFile(handle, file.size, relativePath);
+    const sha256 = await hashFile(handle, file.size, relativePath, signal);
     return {
       assetId: relativePath,
       byteLength: file.size,
@@ -177,7 +180,7 @@ async function openMaterial(packageRoot: string, relativePath: string): Promise<
   }
 }
 
-async function openLegalMaterials(packageRoot: string, pack?: ModelPackKind): Promise<OpenModelPackFile[]> {
+async function openLegalMaterials(packageRoot: string, pack?: ModelPackKind, signal?: AbortSignal): Promise<OpenModelPackFile[]> {
   const paths = [
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
@@ -187,7 +190,7 @@ async function openLegalMaterials(packageRoot: string, pack?: ModelPackKind): Pr
   if (paths.length > MAX_LEGAL_FILES) failInvalid("Package contains too many legal files");
   const files: OpenModelPackFile[] = [];
   try {
-    for (const path of paths) files.push(await openMaterial(packageRoot, path));
+    for (const path of paths) files.push(await openMaterial(packageRoot, path, signal));
     return files;
   } catch (error) {
     await closeFiles(files);
@@ -239,6 +242,7 @@ async function closeFiles(files: readonly OpenModelPackFile[]): Promise<void> {
 }
 
 export async function buildModelPack(input: BuildModelPackInput): Promise<BuildModelPackResult> {
+  input.signal?.throwIfAborted();
   const packageRoot = resolve(input.packageRoot);
   const runtime = await readAssetManifest(join(packageRoot, "dist", "assets", "manifest.json"));
   if (input.pack !== undefined) {
@@ -254,14 +258,15 @@ export async function buildModelPack(input: BuildModelPackInput): Promise<BuildM
   const assets = modelPackAssets(runtime, input.pack);
   const openFiles: OpenModelPackFile[] = [];
   try {
-    for (const asset of assets) openFiles.push(await openModelFile(resolve(input.modelRoot), asset));
-    const materials = await openLegalMaterials(packageRoot, input.pack);
+    for (const asset of assets) openFiles.push(await openModelFile(resolve(input.modelRoot), asset, input.signal));
+    const materials = await openLegalMaterials(packageRoot, input.pack, input.signal);
     openFiles.push(...materials);
     const manifest = createManifest(runtime, assets, materials, input.pack);
     const archive = await writeModelPackArchive(
       resolve(input.outputPath),
       manifest.bytes,
       openFiles,
+      input.signal,
     );
     return {
       ...archive,

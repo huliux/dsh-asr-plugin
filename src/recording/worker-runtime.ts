@@ -334,44 +334,62 @@ function workerAssetConfig(
   };
 }
 
-export async function loadRecordingWorkerRuntime(
+async function openRecordingRuntime(
   config: RecordingWorkerEntryConfig,
+  assets: Awaited<ReturnType<typeof loadWorkerAssets>>,
+  components: RecordingComponents,
 ): Promise<LoadedRecordingWorkerRuntime> {
-  const meetingsRoot = await prepareManagedAudioRoot(config.meetingsRoot);
-  const workRoot = await prepareManagedAudioRoot(config.workRoot);
-  const meeting = await canonicalDirectory(meetingsRoot, config.meetingId);
+  const meeting = await canonicalDirectory(config.meetingsRoot, config.meetingId);
   const recording = await canonicalDirectory(meeting, "recording");
-  const workRecording = await canonicalDirectory(workRoot, config.meetingId, "recording");
-  const assets = await loadWorkerAssets(workerAssetConfig(config, meetingsRoot), RECORDING_ASSET_IDS);
-  if (assets.engineFingerprint !== config.expectedFingerprint) {
-    throw new WorkerRuntimeError("ASSET_MISMATCH", "Recording engine fingerprint changed");
-  }
+  const workRecording = await canonicalDirectory(config.workRoot, config.meetingId, "recording");
   const chunks = await openClosedRecordingChunks(recording);
   const candidateChunks = await openClosedRecordingChunks(recording);
-  const components = await loadComponents(assets.paths, config.processing?.identity.mode ?? "enhanced");
   const draft = new RecordingDraftEngine({
     chunks,
     recognize: createRecordingDraftRecognizer(components.vad, {
-      recognizer: components.recognizer,
-      mode: components.mode,
+      recognizer: components.recognizer, mode: components.mode,
       ...(components.punctuator === undefined ? {} : { punctuator: components.punctuator }),
     }),
   });
-  const authoritative = createAuthoritativeEngine(
-    components,
-    chunks,
+  const authoritative = createAuthoritativeEngine(components, chunks,
     await openRecordingFinalCache(join(workRecording, "authoritative-cache"), assets.engineFingerprint),
-    assets.engineFingerprint,
-  );
-  const paths = {
-    meetingDirectory: meeting,
-    recordingDirectory: recording,
-    workRecordingDirectory: workRecording,
-  };
+    assets.engineFingerprint);
+  const paths = { meetingDirectory: meeting, recordingDirectory: recording, workRecordingDirectory: workRecording };
   return {
     engineFingerprint: assets.engineFingerprint,
     runDrafts: (options) => runDraftLoop(draft, authoritative, options),
     finalize: (message) => finalizeRecording(message, authoritative, candidateChunks, paths),
+    close: async () => {},
+  };
+}
+
+export async function loadRecordingModels(
+  config: RecordingWorkerEntryConfig,
+): Promise<import("./model-server.js").LoadedRecordingModels> {
+  const meetingsRoot = await prepareManagedAudioRoot(config.meetingsRoot);
+  const workRoot = await prepareManagedAudioRoot(config.workRoot);
+  const assets = await loadWorkerAssets(workerAssetConfig(config, meetingsRoot), RECORDING_ASSET_IDS);
+  if (assets.engineFingerprint !== config.expectedFingerprint) {
+    throw new WorkerRuntimeError("ASSET_MISMATCH", "Recording engine fingerprint changed");
+  }
+  const components = await loadComponents(assets.paths, config.processing?.identity.mode ?? "enhanced");
+  return {
+    engineFingerprint: assets.engineFingerprint,
+    createSession: (meetingId, runId) => openRecordingRuntime(
+      { ...config, meetingsRoot, workRoot, meetingId, runId }, assets, components),
     close: () => closeComponents(components),
   };
+}
+
+export async function loadRecordingWorkerRuntime(
+  config: RecordingWorkerEntryConfig,
+): Promise<LoadedRecordingWorkerRuntime> {
+  const models = await loadRecordingModels(config);
+  try {
+    const session = await models.createSession(config.meetingId, config.runId);
+    return { ...session, close: () => models.close() };
+  } catch (error) {
+    await models.close().catch(() => undefined);
+    throw error;
+  }
 }

@@ -27,9 +27,13 @@ const ALLOWED_ROOT_FILES = new Set([
   "LICENSE",
   "README.md",
   "README.zh-CN.md",
+  "CONTRIBUTING.md",
   "THIRD_PARTY_NOTICES.md",
   "cordis.patch.yml",
   "package.json",
+]);
+const PUBLIC_GUIDES = new Set([
+  "docs/model-assets.md", "docs/development.md", "docs/publishing.md",
 ]);
 const FORBIDDEN_SEGMENTS = new Set([
   "build",
@@ -187,6 +191,7 @@ function isForbiddenPath(path) {
   if (isUnsafeRelativePath(path)) {
     return true;
   }
+  if (path === "locale/en.json" || path === "locale/zh.json" || PUBLIC_GUIDES.has(path)) return false;
   const segments = path.split("/");
   const root = segments[0];
   if (root === undefined) return true;

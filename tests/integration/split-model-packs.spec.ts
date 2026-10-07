@@ -1,5 +1,6 @@
-import { readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -7,6 +8,8 @@ import { doctorRuntimeAssets, resolveConfiguredRuntimeAssets, resolveRuntimeAsse
 import { createPackagedWorkerLaunch } from "../../src/worker/launch.js";
 import { parseWorkerEntryConfig } from "../../src/worker/entry-config.js";
 import { loadWorkerAssets } from "../../src/worker/worker-assets.js";
+import { acquireModelStageLease } from "../../src/assets/runtime-assets-stage-lease.js";
+import { readModelSettings } from "../../src/assets/model-settings.js";
 import { buildModelPack } from "../../src/maintenance/model-pack-builder.js";
 import {
   addDoctorRuntime, cleanupRuntimeAssetsFixtures, createModelPackFixture,
@@ -82,7 +85,31 @@ describe("independent model pack delivery", () => {
         join(enhanced.processing!.punctuationRoot!, punctuationAsset.relativePath));
   });
 
-  it("defaults fresh split installations to base and preserves complete legacy mode", async () => {
+  it("automatically uses verified split punctuation without changing an existing run", async () => {
+    const fixture = await splitFixture();
+    let baseRun;
+    for (const pack of ["base", "punctuation"] as const) {
+      const outputPath = join(fixture.archiveRoot, `${pack}.tar`);
+      await buildModelPack({ modelRoot: fixture.archiveRoot, outputPath,
+        packageRoot: fixture.packageRoot, pack });
+      await stageModelPack({ ...fixture, modelPackPath: outputPath });
+      if (pack === "base") {
+        baseRun = await resolveConfiguredRuntimeAssets(fixture);
+        expect(baseRun.processing?.identity.mode).toBe("base");
+      }
+    }
+    expect((await resolveConfiguredRuntimeAssets(fixture)).processing?.identity.mode).toBe("enhanced");
+    expect(await readModelSettings(fixture)).toMatchObject({ mode: "enhanced", selectedReady: true });
+    expect(baseRun?.processing?.identity.mode).toBe("base");
+    expect((await resolveConfiguredRuntimeAssets(fixture, true)).processing?.identity.mode).toBe("enhanced");
+    const completePath = join(fixture.archiveRoot, "complete.tar");
+    await buildModelPack({ modelRoot: fixture.archiveRoot, outputPath: completePath,
+      packageRoot: fixture.packageRoot });
+    await stageModelPack({ ...fixture, modelPackPath: completePath });
+    expect((await resolveConfiguredRuntimeAssets(fixture)).processing?.identity.mode).toBe("enhanced");
+    expect((await resolveConfiguredRuntimeAssets(fixture, false)).processing?.identity.mode).toBe("enhanced");
+  });
+  it("blocks a damaged installed punctuation pack instead of silently switching to base", async () => {
     const fixture = await splitFixture();
     for (const pack of ["base", "punctuation"] as const) {
       const outputPath = join(fixture.archiveRoot, `${pack}.tar`);
@@ -90,15 +117,42 @@ describe("independent model pack delivery", () => {
         packageRoot: fixture.packageRoot, pack });
       await stageModelPack({ ...fixture, modelPackPath: outputPath });
     }
-    expect((await resolveConfiguredRuntimeAssets(fixture)).processing?.identity.mode).toBe("base");
-    expect((await resolveConfiguredRuntimeAssets(fixture, true)).processing?.identity.mode).toBe("enhanced");
-    const completePath = join(fixture.archiveRoot, "complete.tar");
-    await buildModelPack({ modelRoot: fixture.archiveRoot, outputPath: completePath,
-      packageRoot: fixture.packageRoot });
-    await stageModelPack({ ...fixture, modelPackPath: completePath });
-    expect((await resolveConfiguredRuntimeAssets(fixture)).processing?.identity.mode).toBe("enhanced");
-    expect((await resolveConfiguredRuntimeAssets(fixture, false)).processing?.identity.mode).toBe("base");
+    const enhanced = await resolveConfiguredRuntimeAssets(fixture);
+    await rm(join(enhanced.processing!.punctuationRoot!, punctuationAsset.relativePath));
+    await expect(resolveConfiguredRuntimeAssets(fixture)).rejects.toMatchObject({ code: "MODEL_NOT_READY" });
+    expect(await readModelSettings(fixture)).toMatchObject({ mode: "enhanced", selectedReady: false });
   });
+  it.each(["runtime", "settings"] as const)("waits for punctuation repair before reading %s mode", async (reader) => {
+    const fixture = await splitFixture();
+    for (const pack of ["base", "punctuation"] as const) {
+      const outputPath = join(fixture.archiveRoot, `${pack}.tar`);
+      await buildModelPack({ modelRoot: fixture.archiveRoot, outputPath,
+        packageRoot: fixture.packageRoot, pack });
+      await stageModelPack({ ...fixture, modelPackPath: outputPath });
+    }
+    const enhanced = await resolveConfiguredRuntimeAssets(fixture);
+    const installedRoot = enhanced.processing!.punctuationRoot!;
+    const displacedRoot = join(fixture.dataRoot, "assets", ".damaged-repair-test");
+    const lease = await acquireModelStageLease(fixture.dataRoot);
+    let settled = false;
+    let pending: Promise<string> | undefined;
+    try {
+      await rename(installedRoot, displacedRoot);
+      pending = (reader === "runtime"
+        ? resolveConfiguredRuntimeAssets(fixture).then(result => result.processing!.identity.mode)
+        : readModelSettings(fixture).then(result => {
+          expect(result.selectedReady).toBe(true);
+          return result.mode;
+        })).finally(() => { settled = true; });
+      await delay(100);
+      expect(settled).toBe(false);
+    } finally {
+      await rename(displacedRoot, installedRoot);
+      await lease[Symbol.asyncDispose]();
+    }
+    expect(await pending).toBe("enhanced");
+  });
+
   it("requires public provenance and rejects changed provenance without losing base", async () => {
     const fixture = await splitFixture();
     const basePath = join(fixture.archiveRoot, "base.tar");

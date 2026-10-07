@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { recordingErrorCopy } from "./recording-error-copy.js";
 import { Button, Tooltip, StateDot, IconWarningOutlineRegular, IconRefreshOutlineRegular } from "@deepseek-ai/dsh-client-ui-primitives";
 import type { StateDotState } from "@deepseek-ai/dsh-client-ui-primitives";
 import type { RecordingRpcControlPayload, RecordingRpcSegment, RecordingRpcView } from "../recording/rpc-contract.js";
@@ -8,6 +10,7 @@ import { useRecordingPanelLayout } from "./use-recording-panel-layout.js";
 import styles from "./RecordingPanel.module.css";
 
 export interface PanelViewProps {
+  readonly prepare?: (signal: AbortSignal) => Promise<void>;
   readonly hasRecordingHistory: boolean;
   readonly failure: string | null;
   readonly join: () => Promise<void>;
@@ -24,10 +27,16 @@ function isActive(view: RecordingRpcView | null): boolean {
 }
 
 function phaseState(view: RecordingRpcView | null): StateDotState {
+  if (waitingForSound(view)) return "warning";
   if (isActive(view)) return "ongoing";
   if (view?.phase === "failed") return "error";
   if (view?.phase === "partial") return "warning";
   return view?.phase === "completed" ? "done" : "idle";
+}
+
+function waitingForSound(view: RecordingRpcView | null): boolean {
+  return view?.phase === "recording" && (view.mic.requested || view.system.requested) &&
+    ![view.mic, view.system].some(track => track.state === "on" && track.errorCode === null);
 }
 
 function freshness(view: RecordingRpcView | null, translate: Translate): string {
@@ -40,11 +49,13 @@ function freshness(view: RecordingRpcView | null, translate: Translate): string 
 function RecordingStatus({ pendingAction, translate, view }: Pick<PanelViewProps, "pendingAction" | "translate" | "view">) {
   const time = view?.durationMs ?? view?.recordingElapsedMs;
   const phase = pendingAction === "start" ? "starting" : pendingAction === "stop" ? "finalizing" : view?.phase;
+  const stopping = phase === "finalizing" && view?.recordingEndedAtMs == null;
   return <>
     <div className={styles.status} aria-live="polite">
       <span className={styles.phase}>
         {view?.phase === "completed" ? <RecordingIcon name="check" /> : <StateDot size={6} state={phaseState(view)} />}
-        {phase === undefined ? translate("panel.phase.none") : translate(`phase.${phase}`)}
+        {phase === undefined ? translate("panel.phase.none") :
+          stopping ? translate("panel.stopping") : phase === "recording" && waitingForSound(view) ? translate("panel.waitingForSound") : translate(`phase.${phase}`)}
       </span>
       {time !== null && time !== undefined && <span className={styles.hint}>{durationClock(time)}</span>}
     </div>
@@ -86,12 +97,18 @@ function FooterStatus({ translate, view }: Pick<PanelViewProps, "translate" | "v
 
 export function RecordingPanelView(props: PanelViewProps) {
   const { translate } = props;
-  const noSignal = props.failure === "SYSTEM_AUDIO_NO_SIGNAL";
-  const failure = props.failure === "SYSTEM_AUDIO_NO_SIGNAL" ? translate("panel.systemNoSignal")
-    : props.failure === "MICROPHONE_PERMISSION_DENIED" ? translate("panel.micDenied")
-      : props.failure === "SYSTEM_AUDIO_PERMISSION_DENIED" ? translate("panel.systemDenied") : props.failure;
+  const codes = [...new Set([props.failure, props.view?.mic.errorCode, props.view?.system.errorCode]
+    .filter((code): code is string => code != null))];
+  const noSignal = codes.length === 1 && codes[0] === "SYSTEM_AUDIO_NO_SIGNAL";
+  const failure = codes.length === 0 ? null : [...new Set(codes.map(code => recordingErrorCopy(code, translate)))].join("\n");
   const compactWidth = 260 + (failure === null ? 0 : 32);
   const layout = useRecordingPanelLayout(compactWidth);
+  useEffect(() => {
+    if (!layout.expanded || props.prepare === undefined) return;
+    const controller = new AbortController();
+    void props.prepare(controller.signal).catch(() => undefined);
+    return () => controller.abort();
+  }, [layout.expanded, props.prepare]);
   const toggleLabel = translate(layout.expanded ? "panel.collapse" : "panel.expand");
   return <section className={styles.panel} data-expanded={layout.expanded} style={layout.style} aria-label={translate("panel.aria")}>
     <header className={styles.header}>
@@ -109,6 +126,8 @@ export function RecordingPanelView(props: PanelViewProps) {
       <div className={styles.body}>
         <RecordingStatus {...props} />
         {failure !== null && <div className={`${styles.error} ${noSignal ? styles.noSignal : ""}`} role="alert">{failure}</div>}
+        {codes.some(code => /^[A-Z][A-Z0-9_]{0,99}$/.test(code)) && <details><summary>{translate("panel.error.details")}</summary>
+          <code>{codes.filter(code => /^[A-Z][A-Z0-9_]{0,99}$/.test(code)).join(" · ")}</code></details>}
         <Preview {...props} />
       </div>
       <footer className={styles.footer}>

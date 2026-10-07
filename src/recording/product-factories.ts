@@ -20,6 +20,7 @@ import type {
   RecordingSessionWorkerFactory,
 } from "./recording-session.js";
 import { RecordingWorkerClient } from "./worker-client.js";
+import { RecordingPermissionsService } from "./permissions.js";
 
 const HELPER_READY_TIMEOUT_MS = 125_000;
 const HELPER_COMMAND_TIMEOUT_MS = 30_000;
@@ -106,9 +107,17 @@ function createWorkerFactory(
 export function createProductRecordingFactories(options: ProductRecordingFactoriesOptions): {
   readonly helper: RecordingSessionHelperFactory;
   readonly worker: RecordingSessionWorkerFactory;
+  readonly permissions: RecordingPermissionsService;
+  readonly checkPermissions: (signal?: AbortSignal) => Promise<void>;
 } {
+  const permissions = new RecordingPermissionsService({ subprocess: options.subprocess,
+    resolveApp: async () => (await verifyRecordingHelperAssets({
+      ...packagedRecordingHelperLayout(options.packageRoot), inspectSignature: options.inspectHelperSignature,
+    })).appRoot });
   return {
     helper: createHelperFactory(options),
     worker: createWorkerFactory(options),
+    permissions,
+    checkPermissions: signal => permissions.require(signal),
   };
 }

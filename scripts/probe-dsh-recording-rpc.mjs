@@ -37,10 +37,10 @@ async function rpcResponse(method = "state", payload = {}, authenticated = true)
   const origin = new URL(url).origin;
   const login = await fetch(url, { redirect: "manual" });
   const cookie = login.headers.getSetCookie().map((item) => item.split(";")[0]).join("; ");
-  return fetch(`${origin}/dsh-asr-recording/${method}`, {
+  return fetch(`${origin}/api/dsh-asr-recording/${method}`, {
     method: "POST",
     headers: { ...(authenticated ? { cookie } : {}), origin, "content-type": "application/json" },
-    body: JSON.stringify({ type: "client-request", rpcId: "qualification", method, payload }),
+    body: JSON.stringify({ type: "client-request", rpcId: "qualification", method: `dsh-asr-recording/${method}`, payload }),
   });
 }
 

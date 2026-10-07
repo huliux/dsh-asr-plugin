@@ -13,6 +13,7 @@ const WORKER_ENVIRONMENT_KEYS = [
   "TEMP",
   "LANG",
   "LC_ALL",
+  "ELECTRON_RUN_AS_NODE",
   "DYLD_LIBRARY_PATH",
   "LD_LIBRARY_PATH",
   "SystemRoot",

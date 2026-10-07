@@ -44,7 +44,7 @@ it("通过独立 DSH @ source 查询、选择并在发送时重验冻结引用",
   } as const;
   const call = vi.fn(async (_channel, endpoint) => ({
     ok: true as const,
-    value: endpoint === "references/candidates" ? [candidate] : { ...candidate, label: "已改名" },
+    value: endpoint === "dsh-asr-recording/references/candidates" ? [candidate] : { ...candidate, label: "已改名" },
   }));
   const source = createMeetingReferenceSource({
     client: new RecordingRpcClient({ call } as ClientConnectionRpc),
@@ -60,7 +60,7 @@ it("通过独立 DSH @ source 查询、选择并在发送时重验冻结引用",
   );
 
   expect(source).toMatchObject({ trigger: "@", name: "meeting-reference" });
-  expect(call).toHaveBeenNthCalledWith(1, "/dsh-asr-recording", "references/candidates", {
+  expect(call).toHaveBeenNthCalledWith(1, "/api", "dsh-asr-recording/references/candidates", {
     session_id: "session-1",
     locale: "zh-CN",
     query: "产品",
@@ -90,7 +90,7 @@ it("通过独立 DSH @ source 查询、选择并在发送时重验冻结引用",
     },
   });
   await expect(source.codec!.serialize(mention, signal)).resolves.toBe(mention);
-  expect(call).toHaveBeenNthCalledWith(2, "/dsh-asr-recording", "references/resolve", {
+  expect(call).toHaveBeenNthCalledWith(2, "/api", "dsh-asr-recording/references/resolve", {
     locale: "zh-CN",
     meeting_id: MEETING_ID,
   }, signal);

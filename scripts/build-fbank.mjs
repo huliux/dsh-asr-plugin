@@ -3,13 +3,15 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { appleBuildEnvironment } from "./release/apple-build-environment.mjs";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const nativeRoot = resolve(repositoryRoot, "native/fbank");
 const binaryPath = resolve(nativeRoot, "build/Release/fbank.node");
+let buildEnvironment;
 
 function run(command, args) {
-  const result = spawnSync(command, args, { cwd: repositoryRoot, stdio: "inherit" });
+  const result = spawnSync(command, args, { cwd: repositoryRoot, env: buildEnvironment, stdio: "inherit" });
   if (result.status !== 0) {
     throw new Error(`Command failed (${String(result.status)}): ${command}`);
   }
@@ -28,6 +30,7 @@ function assertBuildRuntime() {
 }
 
 assertBuildRuntime();
+buildEnvironment = appleBuildEnvironment();
 run(process.execPath, [
   resolve(repositoryRoot, "node_modules/node-gyp/bin/node-gyp.js"),
   "rebuild",

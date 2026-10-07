@@ -68,3 +68,5 @@
 @media (prefers-reduced-motion: reduce) {
   .wave[data-recording-wave="moving"] path, .spinner { animation: none; }
 }
+
+.error { white-space: pre-line; }

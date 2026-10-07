@@ -116,6 +116,14 @@ static BOOL RHParseIdentity(const char *const argv[],
 
 int main(int argc, const char *argv[]) {
   @autoreleasepool {
+    if (argc == 6 && strcmp(argv[1], "__permissions") == 0) {
+      NSString *root = RHValidateSessionRoot([NSString stringWithUTF8String:argv[2]],
+        [NSString stringWithUTF8String:argv[3]]);
+      unsigned long long host = 0;
+      if (root == nil || !RHParseUnsigned(argv[4], 2, INT_MAX, &host) ||
+          (strcmp(argv[5], "read") != 0 && strcmp(argv[5], "test") != 0)) return 64;
+      return RHCheckRecordingPermissions(root, strcmp(argv[5], "test") == 0, (pid_t)host);
+    }
     if (argc == 10 && strcmp(argv[1], "__watchdog") == 0) {
       RHProcessIdentity helperIdentity = {};
       RHProcessIdentity hostIdentity = {};

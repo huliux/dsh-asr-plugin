@@ -112,7 +112,7 @@ suite("可重建 fbank native", () => {
     }
 
     const build = await readFile(resolve("native/fbank/build/Release/fbank.node"));
-    const staged = await readFile(resolveAssetPath(resolve("data/assets"), asset));
+    const staged = await readFile(resolveAssetPath(resolve("dist"), asset));
     expect({
       byteLength: build.byteLength,
       sha256: createHash("sha256").update(build).digest("hex"),
@@ -125,7 +125,7 @@ suite("可重建 fbank native", () => {
       byteLength: REBUILT_BYTE_LENGTH,
       sha256: REBUILT_SHA256,
     });
-    expect(manifest.algorithmRevision).toBe("p1c-recording-v3-fbank-rebuild");
+    expect(manifest.algorithmRevision).toBe("p1c-recording-v4-base-segmentation");
     expect(supply).toMatchObject({
       sourceMode: "rebuild",
       license: "Apache-2.0 AND MIT AND LicenseRef-Ooura-FFT",

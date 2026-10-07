@@ -1,9 +1,11 @@
-import { mkdtemp, mkdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, open, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { createHash } from "node:crypto";
+import { writeModelPackArchive } from "../../src/assets/model-pack-archive-writer.js";
 import { stageModelPack } from "../../src/assets/runtime-assets.js";
 import { buildModelPack } from "../../src/maintenance/model-pack-builder.js";
 
@@ -143,5 +145,70 @@ describe("model pack builder 输入边界", () => {
       outputPath: legalFixture.outputOne,
       packageRoot: legalFixture.packageRoot,
     })).rejects.toMatchObject({ code: "MODEL_PACK_BUILD_INVALID" });
+  });
+});
+
+
+describe("model pack build cancellation", () => {
+  it("rejects an aborted build before producing an archive", async () => {
+    const fixture = await createFixture();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(buildModelPack({ modelRoot: fixture.sourceRoot, packageRoot: fixture.packageRoot,
+      outputPath: fixture.outputOne, signal: controller.signal })).rejects.toMatchObject({ name: "AbortError" });
+    await expect(stat(fixture.outputOne)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("stops hashing after cancellation without publishing an archive", async () => {
+    const fixture = await createFixture();
+    const model = join(fixture.sourceRoot, "models/example.onnx");
+    const bytes = Buffer.alloc(4 * 1_024 * 1_024, 2);
+    await writeFile(model, bytes);
+    const manifestPath = join(fixture.packageRoot, "dist/assets/manifest.json");
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    manifest.assets[0].byteLength = bytes.length;
+    manifest.assets[0].sha256 = createHash("sha256").update(bytes).digest("hex");
+    await writeFile(manifestPath, JSON.stringify(manifest));
+    const handle = await open(model, "r");
+    const prototype = Object.getPrototypeOf(handle) as typeof handle;
+    const originalRead = prototype.read;
+    const controller = new AbortController();
+    const observe = vi.spyOn(prototype, "read").mockImplementation(async function (
+      this: typeof handle, ...args: Parameters<typeof handle.read>
+    ) {
+      const result = await originalRead.apply(this, args);
+      controller.abort();
+      return result;
+    });
+    try {
+      await expect(buildModelPack({ modelRoot: fixture.sourceRoot, packageRoot: fixture.packageRoot,
+        outputPath: fixture.outputOne, signal: controller.signal })).rejects.toMatchObject({ name: "AbortError" });
+      expect(observe).toHaveBeenCalledTimes(1);
+      await expect(stat(fixture.outputOne)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally { observe.mockRestore(); await handle.close(); }
+  });
+
+  it("stops archive copying after cancellation and removes the temporary output", async () => {
+    const root = await mkdtemp(join(tmpdir(), "dsh-asr-pack-cancel-"));
+    roots.push(root);
+    const bytes = Buffer.alloc(4 * 1_024 * 1_024, 1);
+    const source = join(root, "model.onnx");
+    await writeFile(source, bytes);
+    const handle = await open(source, "r");
+    const controller = new AbortController();
+    const originalRead = handle.read.bind(handle);
+    const observe = vi.spyOn(handle, "read").mockImplementation(async (...args: Parameters<typeof handle.read>) => {
+      const result = await originalRead(...args);
+      controller.abort();
+      return result;
+    });
+    try {
+      await expect(writeModelPackArchive(join(root, "pack.tar"), Buffer.from("{}"), [{
+        assetId: "model", byteLength: bytes.length, handle, relativePath: "model.onnx",
+        sha256: createHash("sha256").update(bytes).digest("hex"),
+      }], controller.signal)).rejects.toMatchObject({ name: "AbortError" });
+      expect(observe).toHaveBeenCalledTimes(1);
+      expect(await readdir(root)).toEqual(["model.onnx"]);
+    } finally { observe.mockRestore(); await handle.close(); }
   });
 });

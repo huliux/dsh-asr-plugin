@@ -1,9 +1,12 @@
+import { recordingHttpServer } from "../helpers/recording-http-server.js";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 import { Context } from "@deepseek-ai/cordis";
+import { HostConnectionService } from "@deepseek-ai/dsh-client-connection";
 import Loader from "@deepseek-ai/cordis-plugin-loader";
 import AgentRegistry from "@deepseek-ai/dsh-agent";
 import LocalJobRegistry from "@deepseek-ai/dsh-jobs-local";
@@ -13,7 +16,8 @@ import ToolRuntime from "@deepseek-ai/dsh-tools";
 import { afterEach, describe, expect, it } from "vitest";
 
 import * as plugin from "../../src/index.js";
-import type { RecordingRpcConnection } from "../../src/recording/host-rpc.js";
+import type { RecordingRpcResult } from "../../src/recording/rpc-contract.js";
+import { acquireModelStageLease } from "../../src/assets/runtime-assets-stage-lease.js";
 import { acquireDataRootLease } from "../../src/storage/data-root-lease.js";
 import { openMeetingRepository } from "../../src/storage/meeting-repository.js";
 import { MEETING_TOOL_NAMES } from "../../src/tools/meeting-tools.js";
@@ -82,6 +86,19 @@ async function loaderContext(
   return { context, pluginId };
 }
 
+async function recordingConnection(context: Context) {
+  await context.plugin(ctx => {
+    new HostConnectionService(ctx, [], { isAuthenticated: () => true } as never);
+  });
+  const call = await recordingHttpServer(context);
+  const invoke = async (endpoint: string, payload: unknown, signal: AbortSignal) => {
+    const response = await call(endpoint, payload, signal);
+    if (response.status !== 200) return undefined;
+    return (await response.json() as { result: RecordingRpcResult }).result;
+  };
+  return Object.assign(invoke, { whenIdle: call.whenIdle });
+}
+
 function meetingToolNames(context: Context): string[] {
   return context.tools.schemas()
     .map((schema) => schema.name)
@@ -95,6 +112,32 @@ afterEach(async () => {
 });
 
 describe("DSH 插件基础装配", () => {
+  it.each(["models/status", "models/prepare"] as const)("forwards cancellation through the assembled %s handler", async endpoint => {
+    const context = await hostContext();
+    const handler = await recordingConnection(context);
+    const root = await temporaryRoot("cancel-model-read");
+    await context.plugin(plugin, { data_dir: root });
+    const lease = await acquireModelStageLease(root);
+    const controller = new AbortController();
+    const pending = handler(endpoint, {}, controller.signal);
+    try {
+      expect(await Promise.race([pending, delay(100, "waiting")])).toBe("waiting");
+      controller.abort();
+      await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+      expect(await Promise.race([handler.whenIdle(), delay(500, "still waiting")])).not.toBe("still waiting");
+      expect(context.jobs.list()).toEqual([]);
+      expect(await handler("state", {}, new AbortController().signal)).toMatchObject({
+        ok: true, value: { recording: null, hasRecordingHistory: false },
+      });
+    } finally {
+      await lease[Symbol.asyncDispose]();
+      await pending.catch(() => undefined);
+    }
+  });
+  it("defaults downloads to automatic routing while accepting legacy proxy settings", () => {
+    expect(plugin.Config({ data_dir: "/isolated" }).hf_download_route.get()).toBe("default");
+    expect(plugin.Config({ data_dir: "/isolated", hf_download_route: "proxy" }).hf_download_route.get()).toBe("proxy");
+  });
   it("只注入 base 的三个服务并提供数据根与新任务标点配置", () => {
     expect(plugin.Config({ data_dir: "/isolated" }).punctuation_enabled.get()).toBeUndefined();
     expect(plugin.Config({ data_dir: "/isolated", punctuation_enabled: false }).punctuation_enabled.get()).toBe(false);
@@ -143,17 +186,11 @@ describe("DSH 插件基础装配", () => {
 
   it.each(["before", "after"])("连接在插件加载 %s 就绪时提供录音状态与 job 控制面", async (timing) => {
     const web = await hostContext();
-    let request: Parameters<RecordingRpcConnection["rpc"]["handle"]>[1] | undefined;
-    const connection: RecordingRpcConnection = {
-      rpc: { handle: (_channel, handler) => {
-        request = handler;
-        return async () => { request = undefined; };
-      } },
-    };
-    if (timing === "before") web.provide("connection", connection as never);
+    let request: Awaited<ReturnType<typeof recordingConnection>> | undefined;
+    if (timing === "before") request = await recordingConnection(web);
     const webRoot = await temporaryRoot("web-job-controller");
     await web.plugin(plugin, { data_dir: webRoot });
-    if (timing === "after") web.provide("connection", connection as never);
+    if (timing === "after") request = await recordingConnection(web);
     await expect.poll(() => request?.("state", {}, new AbortController().signal)).toEqual({
       ok: true,
       value: { recording: null, preview: [], hasRecordingHistory: false },
@@ -278,9 +315,9 @@ describe("DSH 插件发布装配", () => {
       main?: string;
       types?: string;
     };
-    expect(manifest).not.toHaveProperty("private");
     expect(manifest).toMatchObject({
       name: "@huliux/dsh-asr-plugin",
+      private: true,
       main: "dist/index.js",
       types: "dist/index.d.ts",
       exports: {

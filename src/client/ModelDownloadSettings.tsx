@@ -5,19 +5,19 @@ import type { ClientConnectionRpc } from "@deepseek-ai/dsh-client-connection/cli
 import type { ModelDownloadStatus } from "../assets/model-download-contract.js";
 import type { ModelSettingsStatus } from "../assets/model-settings-contract.js";
 import type { ModelSettingsTranslate } from "./model-settings-locales.js";
-import { readDownloadStatus, saveDownloadSettings } from "./model-download-client.js";
-import { RECORDING_RPC_CHANNEL } from "../recording/rpc-contract.js";
+import { readDownloadStatus, saveDownloadSettings, startModelDownload } from "./model-download-client.js";
+import { callRecordingRpc } from "./recording-rpc-transport.js";
 import styles from "./ModelSettingsPage.module.css";
 
 type Props = { form: ConfigPageForm | undefined; rpc: ClientConnectionRpc; t: ModelSettingsTranslate;
-  models: ModelSettingsStatus | null; onInstalled: () => void; preference: React.ReactNode };
-type Draft = { route: "direct" | "proxy"; proxy: string; kind: "mirror" | "http"; revision: number };
+  models: ModelSettingsStatus | null; onInstalled: () => void };
+type Draft = { route: "default"; proxy: string; kind: "http"; revision: number };
 const busy = (state: ModelDownloadStatus | null) => state !== null && ["downloading", "verifying", "installing"].includes(state.phase);
 const mib = (value: number) => `${(value / 1_048_576).toFixed(1)} MiB`;
 
 function useDownloadPolling(rpc: ClientConnectionRpc, onInstalled: () => void,
-  setStatus: (value: ModelDownloadStatus) => void,
-  setError: (value: "downloadFailed") => void) {
+  setStatus: (value: ModelDownloadStatus) => void) {
+  const [readFailed, setReadFailed] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -26,35 +26,33 @@ function useDownloadPolling(rpc: ClientConnectionRpc, onInstalled: () => void,
       try {
         const next = await readDownloadStatus(rpc, controller.signal);
         if (controller.signal.aborted) return;
-        setStatus(next);
+        setStatus(next); setReadFailed(false);
         if (next.phase === "completed" && completed !== next.jobId) { completed = next.jobId; onInstalled(); }
-      } catch { if (!controller.signal.aborted) setError("downloadFailed"); }
+      } catch { if (!controller.signal.aborted) setReadFailed(true); }
       if (!controller.signal.aborted) timer = setTimeout(() => { void poll(); }, 1_000);
     };
     void poll();
     return () => { controller.abort(); clearTimeout(timer); };
   }, [rpc, onInstalled]);
+  return readFailed;
 }
 
 function useDownloadSettings({ form, rpc, onInstalled }: Props) {
   const [status, setStatus] = useState<ModelDownloadStatus | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
-  const [acting, setActing] = useState(false);
   const [error, setError] = useState<"downloadFailed" | "proxyInvalid" | "conflict" | null>(null);
   const value = form?.state.value as Record<string, unknown> | undefined;
-  const acceptedRoute = value?.hf_download_route === "direct" ? "direct" : "proxy";
-  const acceptedProxy = typeof value?.hf_proxy_url === "string" ? value.hf_proxy_url : "";
-  const acceptedKind = value?.hf_proxy_kind === "http" ||
-    (value?.hf_proxy_kind === undefined && acceptedProxy.trim() !== "") ? "http" : "mirror";
-  const route = draft?.route ?? acceptedRoute, proxy = draft?.proxy ?? acceptedProxy, kind = draft?.kind ?? acceptedKind;
+  const acceptedProxy = value?.hf_download_route !== "direct" && value?.hf_proxy_kind !== "mirror" &&
+    typeof value?.hf_proxy_url === "string" ? value.hf_proxy_url : "";
+  const proxy = draft?.proxy ?? acceptedProxy;
   const writable = form?.state.writable === true && form.state.status === "ready";
-  useDownloadPolling(rpc, onInstalled, setStatus, setError);
+  const readFailed = useDownloadPolling(rpc, onInstalled, setStatus);
   const edit = (next: Partial<Draft>) => {
     if (form?.state.revision === undefined) return;
-    const candidate = { route, proxy, kind, revision: draft?.revision ?? form.state.revision, ...next };
-    setDraft(candidate.route === acceptedRoute && candidate.proxy.trim() === acceptedProxy.trim() &&
-      candidate.kind === acceptedKind ? null : candidate);
+    setError(current => current === "proxyInvalid" ? null : current);
+    const candidate: Draft = { route: "default", proxy, kind: "http", revision: draft?.revision ?? form.state.revision, ...next };
+    setDraft(candidate.proxy.trim() === acceptedProxy.trim() ? null : candidate);
   };
   const save = async () => {
     if (draft === null || form === undefined) return;
@@ -66,23 +64,42 @@ function useDownloadSettings({ form, rpc, onInstalled }: Props) {
     } catch { setError("conflict"); }
     finally { setSaving(false); }
   };
+  const { acting, act } = useDownloadActions({ rpc, form, draft, setDraft, setStatus, setError });
+  const active = busy(status);
+  return { status, proxy, writable, draft, saving, acting, error: error ?? (readFailed ? "downloadFailed" : null), active, edit, save, act };
+}
+
+function useDownloadActions({ rpc, form, draft, setDraft, setStatus, setError }: Pick<Props, "rpc" | "form"> & {
+  draft: Draft | null; setDraft: (value: Draft | null) => void; setStatus: (value: ModelDownloadStatus) => void;
+  setError: (value: "downloadFailed" | "proxyInvalid" | "conflict" | null) => void;
+}) {
+  const [acting, setActing] = useState(false);
   const act = async (action: "start" | "cancel", pack?: "base" | "punctuation") => {
     setActing(true); setError(null);
     try {
-      const result = await rpc.call(RECORDING_RPC_CHANNEL, `models/download/${action}`, pack === undefined ? {} : { pack });
-      if (!result.ok) setError(result.error.message === "MODEL_PROXY_INVALID" ? "proxyInvalid" : "downloadFailed");
+      if (action === "start" && pack !== undefined) {
+        const result = await startModelDownload(rpc, form, pack, draft, () => setDraft(null));
+        if (result !== "started") {
+          setError(result === "invalid" ? "proxyInvalid" : result === "conflict" ? "conflict" : "downloadFailed");
+          return;
+        }
+        setDraft(null);
+      } else {
+        const result = await callRecordingRpc(rpc, "models/download/cancel", {});
+        if (!result.ok) setError("downloadFailed");
+      }
       setStatus(await readDownloadStatus(rpc));
     } catch { setError("downloadFailed"); }
     finally { setActing(false); }
   };
-  const active = busy(status);
-  return { status, route, proxy, kind, writable, draft, saving, acting, error, active, edit, save, act };
+  return { acting, act };
 }
 
 export function ModelDownloadSettings(props: Props) {
   const { form, t, models } = props;
   const state = useDownloadSettings(props);
-  const { writable, status, active, acting, saving, draft, act, error } = state;
+  const [proxyOpen, setProxyOpen] = useState(false);
+  const { writable, status, active, acting, saving, act, error } = state;
   return <>
     <section className={styles.card} aria-label={t("assets")}>
       {(["base", "punctuation"] as const).map(pack => <div key={pack} className={styles.modelBlock}>
@@ -94,68 +111,55 @@ export function ModelDownloadSettings(props: Props) {
           </div><p className={styles.description}>{t(`${pack}Description`)} · {t(pack === "base" ? "baseSize" : "punctuationSize")}</p></div>
           {models?.[pack].state !== "ready" ? <Button size="sm"
             variant={pack === "base" ? "primary" : "outline"} aria-label={t(pack === "base" ? "downloadBase" : "downloadPunctuation")}
-            disabled={!writable || status === null || active || acting || saving || draft !== null || models === null}
+            disabled={!writable || status === null || active || acting || saving || models === null}
             onClick={() => { void act("start", pack); }}>{t(models?.[pack].state === "invalid" ? "repair" : "download")}</Button> : null}
         </div>
         {status?.pack === pack && (models?.[pack].state !== "ready" || active || status.phase === "completed") ? <DownloadProgress status={status} t={t} cancel={active ?
-          <Button size="sm" variant="ghost" disabled={acting} onClick={() => { void act("cancel"); }}>{t("cancelDownload")}</Button> : null} /> : null}
-        {pack === "punctuation" ? <div className={styles.modelPreference}>{props.preference}</div> : null}
+          <Button size="sm" variant="ghost" disabled={acting} onClick={() => { void act("cancel"); }}>{t("cancelDownload")}</Button> : null}
+          recovery={status.phase === "failed" ? <div className={styles.downloadActions}>
+            <Button size="sm" variant="outline" disabled={!writable || saving || acting} onClick={() => { void act("start", pack); }}>{t("retry")}</Button>
+            {status.errorCode === "MODEL_DOWNLOAD_PROXY_REQUIRED" ? <Button size="sm" variant="ghost"
+              onClick={() => setProxyOpen(true)}>{t("configureProxy")}</Button> : null}
+          </div> : null} /> : null}
       </div>)}
       <div className={styles.runtimeRow}><span className={styles.description}>{t("native")}</span>
         {models !== null ? <Tag tone={models.native.state === "ready" ? "success" : "danger"}>{t(models.native.state)}</Tag> : null}
       </div>
       {models !== null && !models.selectedReady ? <p className={styles.notice} role="status"><StateDot state="warning" />{t("blocked")}</p> : null}
-      {draft !== null ? <p className={styles.notice} role="status">{t("downloadSettingsPending")}</p> : null}
       {error !== null ? <p className={styles.error} role="status">{t(error)}</p> : null}
     </section>
-    <DownloadRoute form={form} t={t} state={state} />
+    <DownloadRoute form={form} t={t} state={state} open={proxyOpen} onToggle={() => setProxyOpen(value => !value)} />
   </>;
 }
 
-function DownloadRoute({ form, t, state }: Pick<Props, "form" | "t"> & { state: ReturnType<typeof useDownloadSettings> }) {
-  const { writable, draft, saving, save, route, active, edit } = state;
-  const [open, setOpen] = useState(false);
+function DownloadRoute({ form, t, state, open, onToggle }: Pick<Props, "form" | "t"> & {
+  state: ReturnType<typeof useDownloadSettings>; open: boolean; onToggle: () => void;
+}) {
+  const { writable, draft, saving, save, proxy, active, acting, edit, status, act } = state;
+  const retry = status?.phase === "failed" && status.errorCode === "MODEL_DOWNLOAD_PROXY_REQUIRED" && status.pack !== null;
   return <section className={styles.card}>
     <DisclosureRow icon={<IconInfoOutlineRegular />} title={`${t("connectionSettings")}${draft !== null ? ` · ${t("unsaved")}` : ""}`} open={open} expandable expandOnRowClick
-      onToggle={() => setOpen(value => !value)} collapsedContent={<span className={styles.connectionSummary}>{t(route)}</span>}>
+      onToggle={onToggle} collapsedContent={<span className={styles.connectionSummary}>{t(proxy.trim() ? "configured" : "notConfigured")}</span>}>
       {form?.state.status !== "ready" ? <p className={styles.notice}>{t("unavailable")}</p> :
         !writable ? <p className={styles.notice}>{t("readOnly")}</p> : null}
       <div className={styles.downloadRouting}>
-        <span className={styles.label}>{t("hfRoute")}</span>
-        <div className={styles.downloadActions}>
-          {(["direct", "proxy"] as const).map(item => <Button key={item} size="sm"
-            variant={route === item ? "primary" : "outline"} aria-pressed={route === item}
-            disabled={!writable || saving || active} onClick={() => edit({ route: item, ...(item === "proxy" ? { kind: "mirror" as const } : {}) })}>{t(item)}</Button>)}
-        </div>
-        {route === "proxy" ? <ProxyOptions t={t} state={state} /> : null}
-        <p className={styles.description}>{t("fallbackHint")}</p>
+        <label className={styles.downloadRouting}><span>{t("proxyAddress")}</span>
+          <Input value={proxy} placeholder="http://127.0.0.1:7890" autoComplete="off" spellCheck={false}
+            disabled={!writable || saving || acting || active} onChange={event => edit({ proxy: event.target.value })} />
+        </label>
+        <p className={styles.description}>{t("proxyHint")}</p>
       </div>
-      {draft !== null ? <div className={styles.saveRow}>
-        <Button size="sm" disabled={!writable || saving || active} onClick={() => { void save(); }}>{t(saving ? "saving" : "saveRoute")}</Button>
-        <span className={styles.description} role="status">{t("saveBeforeDownload")}</span>
+      {draft !== null || retry ? <div className={styles.saveRow}>
+        <Button size="sm" disabled={!writable || saving || acting || active} onClick={() => {
+          if (retry && status?.pack) void act("start", status.pack); else void save();
+        }}>{t(saving || acting ? "saving" : retry ? "saveRetry" : "save")}</Button>
       </div> : null}
     </DisclosureRow>
   </section>;
 }
 
-function ProxyOptions({ t, state }: Pick<Props, "t"> & { state: ReturnType<typeof useDownloadSettings> }) {
-  const { kind, proxy, writable, saving, active, edit } = state;
-  const disabled = !writable || saving || active;
-  return <div className={styles.proxyOptions}>
-    <div className={styles.downloadActions}>
-      {(["mirror", "http"] as const).map(value => <Button key={value} size="sm" variant={kind === value ? "outline" : "ghost"}
-        aria-pressed={kind === value} disabled={disabled} onClick={() => edit({ kind: value })}>
-        {t(value === "mirror" ? "defaultMirror" : "customProxy")}</Button>)}
-    </div>
-    {kind === "mirror" ? <a className={styles.description} href="https://hf-mirror.com/" target="_blank" rel="noreferrer">hf-mirror.com</a> :
-      <label className={styles.downloadRouting}><span>{t("proxyAddress")}</span>
-        <Input value={proxy} placeholder="http://127.0.0.1:7890" autoComplete="off" spellCheck={false}
-          disabled={disabled} onChange={event => edit({ proxy: event.target.value })} />
-      </label>}
-  </div>;
-}
-
-function DownloadProgress({ status, t, cancel }: { status: ModelDownloadStatus | null; t: ModelSettingsTranslate; cancel: React.ReactNode }) {
+function DownloadProgress({ status, t, cancel, recovery }: { status: ModelDownloadStatus | null; t: ModelSettingsTranslate;
+  cancel: React.ReactNode; recovery: React.ReactNode }) {
   const active = busy(status);
   return <>{status !== null && status.phase !== "idle" ? <div className={styles.downloadProgress} role="status">
       <div className={styles.progressHeading}><span><StateDot state={active ? "ongoing" : status.phase === "failed" ? "error" : "idle"} />
@@ -165,6 +169,29 @@ function DownloadProgress({ status, t, cancel }: { status: ModelDownloadStatus |
         <span className={styles.progressBytes}>{mib(status.downloadedBytes)} / {mib(status.totalBytes)}
           {status.totalBytes > 0 ? ` · ${Math.floor(status.downloadedBytes * 100 / status.totalBytes)}%` : ""}</span>
       </> : null}
-      {status.phase === "failed" ? <p className={styles.description}>{t("downloadFailed")}</p> : null}
+      {status.phase === "failed" ? <><p className={styles.description}>{t(downloadFailureKey(status.errorCode))}</p>{recovery}</> : null}
+      <PreparationSteps status={status} t={t} />
     </div> : null}</>;
+}
+
+function downloadFailureKey(code: string | null) {
+  if (code === "MODEL_DOWNLOAD_PROXY_REQUIRED") return "proxyRequired";
+  if (code === "MODEL_DOWNLOAD_SOURCE_UNAVAILABLE") return "sourceUnavailable";
+  if (code === "MODEL_DOWNLOAD_DISK_FULL") return "diskFull";
+  if (["MODEL_DOWNLOAD_STORAGE_DENIED", "MODEL_DOWNLOAD_WRITE_FAILED", "ASSET_PATH_INVALID"].includes(code ?? "")) return "storageFailed";
+  if (["MODEL_DOWNLOAD_HASH_MISMATCH", "MODEL_DOWNLOAD_SIZE_MISMATCH", "MODEL_DOWNLOAD_TOO_LARGE",
+    "ASSET_HASH_MISMATCH", "ASSET_SIZE_MISMATCH"].includes(code ?? "")) return "verificationFailed";
+  return "downloadFailed";
+}
+
+function PreparationSteps({ status, t }: { status: ModelDownloadStatus; t: ModelSettingsTranslate }) {
+  const phases = ["downloading", "verifying", "installing"] as const;
+  const index = status.phase === "completed" ? phases.length : phases.findIndex(phase => phase === status.phase);
+  if (index < 0) return null;
+  return <ol className={styles.preparationSteps} aria-label={t("preparationSteps")}>
+    {phases.map((phase, step) => <li key={phase}>
+      <StateDot appearance="step" size={16} state={step < index ? "done" : step === index ? "ongoing" : "idle"} />
+      <span>{t(phase === "downloading" ? "prepareDownload" : phase === "verifying" ? "prepareVerify" : "prepareInstall")}</span>
+    </li>)}
+  </ol>;
 }

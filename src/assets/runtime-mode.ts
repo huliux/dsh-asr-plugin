@@ -7,10 +7,11 @@ import type { DoctorRuntimeLayout } from "./runtime-assets-doctor.js";
 import { RuntimeAssetsError } from "./runtime-assets-error.js";
 import { currentRuntime, verifyAssetAtRoot } from "./runtime-asset-verifier.js";
 import { AssetVerificationError } from "./verify-assets.js";
+import { installationState } from "./runtime-assets-installation.js";
 import type { ModelPackKind } from "./model-pack.js";
 
 export async function selectedModelRoot(
-  layout: DoctorRuntimeLayout,
+  layout: Pick<DoctorRuntimeLayout, "manifest" | "modelRoot">,
   modelStoreRoot: string,
   pack: ModelPackKind,
 ): Promise<string> {
@@ -27,6 +28,7 @@ export async function selectedModelRoot(
 export async function resolveProcessingAssets(
   layout: DoctorRuntimeLayout & { modelStoreRoot: string },
   mode: ProcessingMode,
+  signal?: AbortSignal,
 ) {
   const identity = createProcessingIdentity(layout.manifest, layout.engineFingerprint, mode);
   const modelRoot = await selectedModelRoot(layout, layout.modelStoreRoot, "base");
@@ -38,7 +40,7 @@ export async function resolveProcessingAssets(
       if (mode === "base" && isPunctuationAsset(asset)) continue;
       const root = asset.kind === "native" ? layout.packagedNativeRoot
         : isPunctuationAsset(asset) ? punctuationRoot! : modelRoot;
-      await verifyAssetAtRoot(root, asset, runtime);
+      await verifyAssetAtRoot(root, asset, runtime, signal);
     }
   } catch (error) {
     if (!(error instanceof AssetVerificationError)) throw error;
@@ -52,18 +54,20 @@ export async function resolveProcessingAssets(
 
 
 export async function configuredProcessingMode(
-  layout: Pick<DoctorRuntimeLayout, "modelRoot">,
-  punctuationEnabled: boolean | undefined,
+  layout: Pick<DoctorRuntimeLayout, "modelRoot" | "manifest"> & { modelStoreRoot: string },
+  signal?: AbortSignal,
 ): Promise<ProcessingMode> {
-  if (punctuationEnabled !== undefined) {
-    if (typeof punctuationEnabled !== "boolean") throw new TypeError("Invalid punctuation preference");
-    return punctuationEnabled ? "enhanced" : "base";
+  const assets = layout.manifest.assets.filter(isPunctuationAsset);
+  if (assets.length === 0) return await installationState(layout, signal) === "ready" ? "enhanced" : "base";
+  const root = await selectedModelRoot(layout, layout.modelStoreRoot, "punctuation");
+  if (root !== layout.modelRoot) return "enhanced";
+  for (const asset of assets) {
+    try {
+      await lstat(join(root, asset.relativePath));
+      return "enhanced";
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+    }
   }
-  try {
-    await lstat(layout.modelRoot);
-    return "enhanced";
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return "base";
-    throw error;
-  }
+  return "base";
 }

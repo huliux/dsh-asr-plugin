@@ -30,7 +30,7 @@ export async function verifyModelsAtRoot(
     if (signal?.aborted === true) {
       throw new RuntimeAssetsError("STAGE_ABORTED", "Model pack staging was cancelled");
     }
-    if (asset.kind !== "native") await verifyAssetAtRoot(modelRoot, asset, runtime);
+    if (asset.kind !== "native") await verifyAssetAtRoot(modelRoot, asset, runtime, signal);
   }
   if (signal?.aborted === true) {
     throw new RuntimeAssetsError("STAGE_ABORTED", "Model pack staging was cancelled");
@@ -47,7 +47,8 @@ async function fsyncDirectory(path: string): Promise<void> {
 }
 
 export async function installationState(
-  layout: ModelInstallationLayout,
+  layout: Pick<ModelInstallationLayout, "manifest" | "modelRoot">,
+  signal?: AbortSignal,
 ): Promise<InstallationState> {
   try {
     const existing = await lstat(layout.modelRoot);
@@ -57,9 +58,10 @@ export async function installationState(
     throw error;
   }
   try {
-    await verifyModelsAtRoot(layout.manifest, layout.modelRoot);
+    await verifyModelsAtRoot(layout.manifest, layout.modelRoot, signal);
     return "ready";
   } catch (error) {
+    if (error instanceof RuntimeAssetsError && error.code === "STAGE_ABORTED") throw error;
     if (error instanceof AssetVerificationError || error instanceof RuntimeAssetsError) {
       return "damaged";
     }

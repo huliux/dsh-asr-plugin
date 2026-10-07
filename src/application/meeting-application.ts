@@ -79,7 +79,7 @@ export class MeetingApplicationError extends Error {
 }
 
 export interface MeetingApplicationOptions {
-  readonly prepareRuntime?: () => Promise<MeetingRuntimeSnapshot>;
+  readonly prepareRuntime?: (signal?: AbortSignal, purpose?: "batch" | "recording") => Promise<MeetingRuntimeSnapshot>;
   readonly asr: WorkerRunner;
   readonly audioStore: ManagedAudioStore;
   readonly dataRoot: string;
@@ -90,6 +90,7 @@ export interface MeetingApplicationOptions {
   readonly now?: () => number;
   readonly repository: MeetingRepository;
   readonly recording?: {
+    readonly checkPermissions?: (signal?: AbortSignal) => Promise<void>;
     readonly helper: RecordingSessionHelperFactory;
     readonly monotonicNow?: () => number;
     readonly worker: RecordingSessionWorkerFactory;
@@ -201,7 +202,7 @@ function checkedClock(clock: () => number): () => number {
 
 export class MeetingApplication {
   private readonly dependencies: MeetingTranscriptionRunDependencies;
-  private readonly prepareRuntime: (() => Promise<MeetingRuntimeSnapshot>) | undefined;
+  private readonly prepareRuntime: MeetingApplicationOptions["prepareRuntime"];
   private readonly generateId: () => string;
   private readonly jobs: Pick<JobRegistry, "start">;
   private readonly transcriptProjection: TranscriptProjection;
@@ -214,7 +215,10 @@ export class MeetingApplication {
   constructor(options: MeetingApplicationOptions) {
     requireEngineFingerprint(options.engineFingerprint);
     this.prepareRuntime = options.prepareRuntime === undefined ? undefined
-      : async () => freezeMeetingRuntime(await options.prepareRuntime!());
+      : async (signal, purpose) => freezeMeetingRuntime(await options.prepareRuntime!(signal, purpose).catch(error => {
+        assertNotCancelled(signal);
+        throw error;
+      }));
     const now = checkedClock(options.now ?? Date.now);
     this.dependencies = {
       asr: options.asr,
@@ -237,6 +241,7 @@ export class MeetingApplication {
       engineFingerprint: options.engineFingerprint,
       generateId: this.generateId,
       helper: options.recording.helper,
+      ...(options.recording.checkPermissions === undefined ? {} : { checkPermissions: options.recording.checkPermissions }),
       jobs: options.jobs,
       now,
       repository: options.repository,
@@ -284,12 +289,20 @@ export class MeetingApplication {
     return this.dependencies.repository.hasRecordingHistory();
   }
 
+  async prepareRecording(signal?: AbortSignal): Promise<void> {
+    this.assertAccepting();
+    this.assertIdle();
+    assertNotCancelled(signal);
+    await this.prepareRuntime?.(signal, "recording");
+    assertNotCancelled(signal);
+  }
+
   async startImport(input: ImportMeetingInput): Promise<ImportMeetingStarted> {
     this.assertAccepting();
     const title = explicitTitle(input.title);
     assertNotCancelled(input.signal);
     this.assertIdle();
-    const runtime = this.prepareRuntime === undefined ? undefined : await this.prepareRuntime();
+    const runtime = this.prepareRuntime === undefined ? undefined : await this.prepareRuntime(input.signal);
     this.assertAccepting();
     assertNotCancelled(input.signal);
     this.assertIdle();
@@ -321,7 +334,7 @@ export class MeetingApplication {
     assertNotCancelled(input.signal);
     this.assertIdle();
     let meeting = this.requiredMeeting(input.meetingId);
-    const runtime = this.prepareRuntime === undefined ? undefined : await this.prepareRuntime();
+    const runtime = this.prepareRuntime === undefined ? undefined : await this.prepareRuntime(input.signal);
     this.assertRetranscriptionTarget(meeting, input.expectedVersion);
     meeting = await this.ensureRecordingSource(meeting);
     await this.assertManagedSource(meeting);

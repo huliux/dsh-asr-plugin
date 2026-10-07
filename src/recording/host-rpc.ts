@@ -1,5 +1,6 @@
 import type { ModelDownloadControl } from "../assets/model-download-contract.js";
 import type { ModelSettingsStatus } from "../assets/model-settings-contract.js";
+import type { RecordingPermissionControl } from "./permission-contract.js";
 import type { MeetingApplication } from "../application/meeting-application.js";
 import type { MeetingReferenceCandidate } from "../application/meeting-reference.js";
 import type { RecordingControlInput } from "../application/recording-application.js";
@@ -111,11 +112,36 @@ function referenceValue(candidate: MeetingReferenceCandidate) {
 export function registerRecordingHostRpc(
   connection: RecordingRpcConnection,
   application: MeetingApplication,
-  modelStatus?: () => Promise<ModelSettingsStatus>,
+  modelStatus?: (signal: AbortSignal) => Promise<ModelSettingsStatus>,
   downloads?: ModelDownloadControl,
+  permissions?: RecordingPermissionControl,
+  prepareModels?: (signal: AbortSignal) => Promise<void>,
 ): () => Promise<void> {
   return connection.rpc.handle(RECORDING_RPC_CHANNEL, async (endpoint, payload, signal) => {
     try {
+      if (endpoint === "models/prepare" && prepareModels !== undefined) {
+        emptyPayload(payload);
+        await prepareModels(signal);
+        return { ok: true, value: null };
+      }
+      if (endpoint.startsWith("permissions/") && permissions !== undefined) {
+        if (endpoint === "permissions/open-settings") {
+          const value = record(payload);
+          if (value === null || !exact(value, ["track"]) ||
+              (value.track !== "microphone" && value.track !== "system")) inputError();
+          await permissions.openSettings(value.track, signal);
+          return { ok: true, value: null };
+        }
+        emptyPayload(payload);
+        if (endpoint === "permissions/status") return { ok: true, value: await permissions.read(signal) };
+        if (endpoint === "permissions/test") {
+          const phase = application.getRecordingState()?.phase;
+          if (phase !== undefined && ["starting", "recording", "finalizing"].includes(phase)) {
+            throw Object.assign(new Error("Recording is active"), {code:"ENGINE_BUSY"});
+          }
+          return { ok: true, value: await permissions.test(signal) };
+        }
+      }
       if (endpoint.startsWith("models/download/") && downloads !== undefined) {
         if (endpoint === "models/download/start") {
           const value = record(payload);
@@ -129,7 +155,7 @@ export function registerRecordingHostRpc(
       }
       if (endpoint === "models/status" && modelStatus !== undefined) {
         emptyPayload(payload);
-        return { ok: true, value: await modelStatus() };
+        return { ok: true, value: await modelStatus(signal) };
       }
       if (endpoint === "state") {
         emptyPayload(payload);

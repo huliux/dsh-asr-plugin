@@ -26,6 +26,7 @@ interface ArchiveState {
   readonly handle: FileHandle;
   readonly hash: ReturnType<typeof createHash>;
   position: number;
+  readonly signal?: AbortSignal;
 }
 
 function writeTextField(header: Buffer, offset: number, length: number, value: string): void {
@@ -77,6 +78,7 @@ function createUstarHeader(path: string, byteLength: number): Buffer {
 async function writeArchiveBytes(state: ArchiveState, bytes: Buffer): Promise<void> {
   let completed = 0;
   while (completed < bytes.byteLength) {
+    state.signal?.throwIfAborted();
     const { bytesWritten } = await state.handle.write(
       bytes,
       completed,
@@ -105,6 +107,7 @@ async function writeFilePayload(state: ArchiveState, file: OpenModelPackFile): P
   const hash = createHash("sha256");
   let position = 0;
   while (position < file.byteLength) {
+    state.signal?.throwIfAborted();
     const chunk = Buffer.allocUnsafe(Math.min(1_024 * 1_024, file.byteLength - position));
     const { bytesRead } = await file.handle.read(chunk, 0, chunk.byteLength, position);
     if (bytesRead === 0) break;
@@ -196,7 +199,9 @@ export async function writeModelPackArchive(
   outputPath: string,
   manifestBytes: Buffer,
   files: readonly OpenModelPackFile[],
+  signal?: AbortSignal,
 ): Promise<{ archiveByteLength: number; archiveSha256: string }> {
+  signal?.throwIfAborted();
   expectedArchiveSize(manifestBytes, files);
   const parent = dirname(outputPath);
   await mkdir(parent, { recursive: true, mode: 0o700 });
@@ -207,7 +212,8 @@ export async function writeModelPackArchive(
     constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW,
     0o600,
   );
-  const state: ArchiveState = { handle, hash: createHash("sha256"), position: 0 };
+  const state: ArchiveState = { handle, hash: createHash("sha256"), position: 0,
+    ...(signal === undefined ? {} : { signal }) };
   try {
     await writeArchiveContents(state, manifestBytes, files);
   } catch (error) {
@@ -218,6 +224,7 @@ export async function writeModelPackArchive(
   await handle.close();
   const result = { archiveByteLength: state.position, archiveSha256: state.hash.digest("hex") };
   try {
+    signal?.throwIfAborted();
     await publishArchive(tempPath, outputPath);
   } catch (error) {
     await rm(tempPath, { force: true });

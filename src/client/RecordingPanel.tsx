@@ -58,9 +58,13 @@ function useRecordingSnapshot(client: RecordingRpcClient, references: RecordingR
   const [hasRecordingHistory, setHasRecordingHistory] = useState(false);
   const [preview, setPreview] = useState<readonly RecordingRpcSegment[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [readError, setReadError] = useState<string | null>(null);
+  const latestRefresh = useRef(0);
   const refresh = useCallback(async (signal?: AbortSignal) => {
+    const request = ++latestRefresh.current;
     const state = await client.state(signal);
-    if (!mounted.current) return;
+    if (!mounted.current || request !== latestRefresh.current) return;
+    setReadError(null);
     setView(state.recording);
     setPreview(state.preview);
     setHasRecordingHistory(state.hasRecordingHistory);
@@ -72,7 +76,7 @@ function useRecordingSnapshot(client: RecordingRpcClient, references: RecordingR
     const controller = new AbortController();
     const tick = () => void refresh(controller.signal).catch((cause: unknown) => {
       if (mounted.current && !controller.signal.aborted) {
-        setError(cause instanceof Error ? cause.message : "ENGINE_FAILURE");
+        setReadError(cause instanceof Error ? cause.message : "ENGINE_FAILURE");
       }
     });
     tick();
@@ -83,7 +87,7 @@ function useRecordingSnapshot(client: RecordingRpcClient, references: RecordingR
       clearInterval(timer);
     };
   }, [refresh]);
-  return { error, hasRecordingHistory, mounted, preview, refresh, setError, setView, view };
+  return { error: error ?? readError, hasRecordingHistory, mounted, preview, refresh, setError, setView, view };
 }
 
 function useRecordingControl(options: {
@@ -96,7 +100,10 @@ function useRecordingControl(options: {
   readonly setPending: (value: RecordingPendingAction) => void;
   readonly setView: (value: RecordingRpcView) => void;
 }) {
+  const generation = useRef(0);
   return useCallback(async (payload: RecordingRpcControlPayload) => {
+    const request = ++generation.current;
+    let settled = false;
     const { client, currentSessionId, mounted, references, refresh } = options;
     const startSessionId = payload.action === "start" ? currentSessionId() : undefined;
     options.setPending(payload.action);
@@ -105,13 +112,15 @@ function useRecordingControl(options: {
       const next = await client.control(payload);
       if (!mounted.current) return;
       options.setView(next);
+      options.setPending(null);
+      settled = true;
       if (payload.action === "start") await references.recordingStarted(next, startSessionId);
       else references.observeRecording(next);
       await refresh();
     } catch (cause) {
-      if (mounted.current) options.setError(cause instanceof Error ? cause.message : "ENGINE_FAILURE");
+      if (mounted.current && generation.current === request) options.setError(cause instanceof Error ? cause.message : "ENGINE_FAILURE");
     } finally {
-      if (mounted.current) options.setPending(null);
+      if (mounted.current && !settled && generation.current === request) options.setPending(null);
     }
   }, [options]);
 }
@@ -145,7 +154,14 @@ export function RecordingPanel(props: RecordingPanelProps) {
   useSyncExternalStore(listener => locale.subscribe(listener), () => locale.getSnapshot());
   const client = useMemo(() => new RecordingRpcClient(rpc), [rpc]);
   const snapshot = useRecordingSnapshot(client, references);
+  const prepare = useCallback((signal: AbortSignal) => client.prepareModels(signal), [client]);
   const [pendingAction, setPending] = useState<RecordingPendingAction>(null);
+  useEffect(() => {
+    if (pendingAction !== "stop") return;
+    const controller = new AbortController();
+    const timer = setInterval(() => void snapshot.refresh(controller.signal).catch(() => undefined), 200);
+    return () => { controller.abort(); clearInterval(timer); };
+  }, [pendingAction, snapshot.refresh]);
   const run = useRecordingControl({
     client, currentSessionId, mounted: snapshot.mounted, references,
     refresh: snapshot.refresh, setError: snapshot.setError, setPending, setView: snapshot.setView,
@@ -156,6 +172,6 @@ export function RecordingPanel(props: RecordingPanelProps) {
   });
   const failure = snapshot.error ?? trackError(snapshot.view);
   return <RecordingPanelView failure={failure} join={join} pending={pendingAction !== null} pendingAction={pendingAction}
-    hasRecordingHistory={snapshot.hasRecordingHistory}
+    hasRecordingHistory={snapshot.hasRecordingHistory} prepare={prepare}
     preview={snapshot.preview} run={run} translate={translate} view={snapshot.view} />;
 }

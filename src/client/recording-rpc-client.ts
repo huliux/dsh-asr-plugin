@@ -1,7 +1,7 @@
+import { callRecordingRpc } from "./recording-rpc-transport.js";
 import type { ClientConnectionRpc } from "@deepseek-ai/dsh-client-connection/client";
 
 import {
-  RECORDING_RPC_CHANNEL,
   type MeetingReferenceRpcCandidate,
   type MeetingReferenceRpcCandidatesPayload,
   type MeetingReferenceRpcPhase,
@@ -186,13 +186,17 @@ async function call(
   payload: unknown,
   signal?: AbortSignal,
 ): Promise<unknown> {
-  const result = await rpc.call(RECORDING_RPC_CHANNEL, endpoint, payload, signal);
+  const result = await callRecordingRpc(rpc, endpoint, payload, signal);
   if (!result.ok) throw new Error(result.error.message);
   return result.value;
 }
 
 export class RecordingRpcClient {
   constructor(private readonly rpc: ClientConnectionRpc) {}
+
+  async prepareModels(signal?: AbortSignal): Promise<void> {
+    if (await call(this.rpc, "models/prepare", {}, signal) !== null) throw new Error("INVALID_RESPONSE");
+  }
 
   async state(signal?: AbortSignal): Promise<RecordingRpcStateValue> {
     return parseState(await call(this.rpc, "state", {}, signal));

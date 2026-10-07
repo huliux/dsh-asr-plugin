@@ -36,6 +36,7 @@ const processRegistryTestBinary = resolve(buildRoot, "recording-helper-process-r
 const captureTrackTestBinary = resolve(buildRoot, "recording-helper-capture-track-tests");
 const sessionTestBinary = resolve(buildRoot, "recording-helper-session-tests");
 const systemFormatTestBinary = resolve(buildRoot, "recording-system-format-tests");
+const systemProbeTestBinary = resolve(buildRoot, "recording-system-probe-tests");
 const fakeCaptureRoot = resolve(buildRoot, "fake-capture");
 const helperBinary = resolve(macOSRoot, "DSHASRRecordingHelper");
 const micBinary = resolve(embeddedRoot, "dsh-asr-capture-mic");
@@ -248,8 +249,9 @@ async function build() {
     resolve(appSourceRoot, "RHCaptureTrack.m"),
     resolve(appSourceRoot, "RHRecordingSession.m"),
     resolve(appSourceRoot, "RHPermissions.m"),
+    resolve(appSourceRoot, "RHSystemAudioProbe.m"),
     resolve(appSourceRoot, "main.m"),
-  ], ["Foundation", "AVFoundation"]);
+  ], ["Foundation", "AVFoundation", "CoreAudio", "AudioToolbox"]);
   compileObjectiveC(protocolTestBinary, [
     resolve(appSourceRoot, "RHJournal.m"),
     resolve(nativeRoot, "tests/protocol_tests.m"),
@@ -291,6 +293,10 @@ async function build() {
     resolve(nativeRoot, "tests/system_format_tests.mm"),
     "config/recorder_config.cpp",
   ], ["Foundation", "CoreAudio", "AudioToolbox"], "14.2");
+  compileObjectiveC(systemProbeTestBinary, [
+    resolve(nativeRoot, "tests/system_audio_probe_tests.m"),
+  ], ["Foundation", "AVFoundation", "CoreAudio", "AudioToolbox"]);
+  run(systemProbeTestBinary, []);
   run(systemFormatTestBinary, []);
   run(protocolTestBinary, []);
   run(chunkStoreTestBinary, []);
@@ -313,7 +319,7 @@ async function build() {
   if (publicRelease) {
     await Promise.all([
       rm(protocolTestBinary), rm(chunkStoreTestBinary), rm(processRegistryTestBinary),
-      rm(captureTrackTestBinary), rm(sessionTestBinary), rm(systemFormatTestBinary),
+      rm(captureTrackTestBinary), rm(sessionTestBinary), rm(systemFormatTestBinary), rm(systemProbeTestBinary),
       rm(fakeCaptureRoot, { recursive: true }),
     ]);
     await rename(buildRoot, outputRoot);

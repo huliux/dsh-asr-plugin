@@ -38,6 +38,7 @@ export type {
 } from "./runtime-assets-doctor.js";
 
 export interface RuntimeAssetsInput {
+  readonly signal?: AbortSignal;
   readonly mode?: ProcessingMode;
   readonly dataRoot: string;
   readonly packageRoot: string;
@@ -45,7 +46,6 @@ export interface RuntimeAssetsInput {
 
 export interface StageModelPackInput extends RuntimeAssetsInput {
   readonly modelPackPath: string;
-  readonly signal?: AbortSignal;
 }
 
 export interface StageResult {
@@ -181,11 +181,11 @@ async function assertLegalMaterials(
   }
 }
 
-async function verifyRuntimeManifestAssets(layout: RuntimeLayout): Promise<void> {
+async function verifyRuntimeManifestAssets(layout: RuntimeLayout, signal?: AbortSignal): Promise<void> {
   const runtime = currentRuntime();
   for (const asset of layout.manifest.assets) {
     const root = asset.kind === "native" ? layout.packagedNativeRoot : layout.modelRoot;
-    await verifyAssetAtRoot(root, asset, runtime);
+    await verifyAssetAtRoot(root, asset, runtime, signal);
   }
 }
 
@@ -277,8 +277,8 @@ export async function resolveRuntimeAssets(
   input: RuntimeAssetsInput,
 ): Promise<ResolvedRuntimeAssets> {
   const layout = await runtimeLayout(input);
-  if (input.mode !== undefined) return { ...layout, ...await resolveProcessingAssets(layout, input.mode) };
-  await verifyRuntimeManifestAssets(layout);
+  if (input.mode !== undefined) return { ...layout, ...await resolveProcessingAssets(layout, input.mode, input.signal) };
+  await verifyRuntimeManifestAssets(layout, input.signal);
   return {
     engineFingerprint: layout.engineFingerprint,
     manifestPath: layout.manifestPath,
@@ -290,11 +290,16 @@ export async function resolveRuntimeAssets(
 
 export async function resolveConfiguredRuntimeAssets(
   input: RuntimeAssetsInput,
-  punctuationEnabled?: boolean,
+  _legacyPreference?: boolean,
 ): Promise<ResolvedRuntimeAssets> {
-  const layout = await runtimeLayout(input);
-  const mode = await configuredProcessingMode(layout, punctuationEnabled);
-  return { ...layout, ...await resolveProcessingAssets(layout, mode) };
+  const lease = await acquireModelStageLease(input.dataRoot, input.signal);
+  try {
+    const layout = await runtimeLayout(input);
+    const mode = await configuredProcessingMode(layout, input.signal);
+    return { ...layout, ...await resolveProcessingAssets(layout, mode, input.signal) };
+  } finally {
+    await lease[Symbol.asyncDispose]();
+  }
 }
 
 export async function doctorRuntimeAssets(input: RuntimeAssetsInput): Promise<DoctorReport> {

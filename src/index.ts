@@ -4,7 +4,7 @@ import { chmod, mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { Context } from "@deepseek-ai/cordis";
+import type { Context, FiberState } from "@deepseek-ai/cordis";
 import { dshHomePath, expandHomePath } from "@deepseek-ai/dsh-home-paths";
 import z from "@deepseek-ai/schemastery";
 
@@ -17,10 +17,9 @@ import type { ResolvedRuntimeAssets } from "./assets/runtime-assets.js";
 import { fingerprintAssetManifest } from "./assets/verify-assets.js";
 import { createDshRecordingHelperSignatureInspector } from "./assets/recording-helper-signature.js";
 import { createProductRecordingFactories } from "./recording/product-factories.js";
-import {
-  registerRecordingHostRpc,
-  type RecordingRpcConnection,
-} from "./recording/host-rpc.js";
+import { RecordingModelWorker } from "./recording/model-worker.js";
+import { registerRecordingHostRpc } from "./recording/host-rpc.js";
+import { recordingHttpConnection, type RecordingWebServer } from "./recording/http-connection.js";
 import { acquireDataRootLease } from "./storage/data-root-lease.js";
 import { openManagedAudioStore } from "./storage/managed-audio-store.js";
 import {
@@ -46,18 +45,20 @@ export const inject = ["tools", "jobs", "subprocess"];
 const DEFAULT_DATA_DIRECTORY = dshHomePath("dsh-asr-plugin");
 const PACKAGE_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const MANIFEST_PATH = fileURLToPath(new URL("./assets/manifest.json", import.meta.url));
+const ACTIVE_FIBER_STATE = 2 satisfies FiberState;
 
 export interface Config {
   readonly data_dir?: string;
   readonly punctuation_enabled?: boolean;
-  readonly hf_download_route?: "direct" | "proxy";
+  readonly hf_download_route?: "default" | "direct" | "proxy";
   readonly hf_proxy_url?: string;
   readonly hf_proxy_kind?: "mirror" | "http";
 }
 
 export const Config = z.object({
-  punctuation_enabled: z.boolean().volatile().description("Enable punctuation for new tasks; requires the optional model pack"),
-  hf_download_route: z.union(["direct", "proxy"]).default("proxy").volatile(),
+  punctuation_enabled: z.boolean().volatile().description("Legacy setting; punctuation is now selected from installed models"),
+  hf_download_route: z.union(["default", "direct", "proxy"]).default("default").volatile()
+    .description("Legacy route; downloads automatically select pinned sources"),
   hf_proxy_url: z.string().default("").volatile(),
   hf_proxy_kind: z.union(["mirror", "http"]).volatile(),
   data_dir: z.string().default(DEFAULT_DATA_DIRECTORY),
@@ -95,6 +96,7 @@ async function prepareDatabaseDirectory(dataRoot: string): Promise<void> {
 
 interface HostLifetime {
   downloads: ModelDownloadController | undefined;
+  models: RecordingModelWorker | undefined;
   application: MeetingApplication | undefined;
   readonly lease: AsyncDisposable;
   repository: MeetingRepository | undefined;
@@ -106,7 +108,8 @@ async function disposeHost(lifetime: HostLifetime): Promise<void> {
     if (lifetime.application === undefined) lifetime.repository?.close();
     else await lifetime.application.shutdown();
   } finally {
-    await lifetime.lease[Symbol.asyncDispose]();
+    try { await lifetime.models?.dispose(); }
+    finally { await lifetime.lease[Symbol.asyncDispose](); }
   }
 }
 
@@ -139,10 +142,12 @@ function createWorkerRunner(
   fingerprint: string,
   paths: RuntimePaths,
   runtimeAssets: () => Promise<ResolvedRuntimeAssets>,
+  models?: RecordingModelWorker,
 ): WorkerRunner {
   const spawner = createDshWorkerSpawner(context.subprocess);
   return {
     async run(run: WorkerRunMessage, options?: WorkerRunOptions) {
+      await models?.releaseIdle();
       const assets = await runtimeAssets();
       const worker = new WorkerClient({
         kind,
@@ -177,32 +182,43 @@ function runtimeAssetsResolver(dataRoot: string): () => Promise<ResolvedRuntimeA
   };
 }
 
-function createRuntimePreparer(context: Context, paths: RuntimePaths) {
-  return async () => {
-    const punctuationEnabled = (context.fiber.config as ParsedConfig).punctuation_enabled.get();
+function createRuntimePreparer(context: Context, paths: RuntimePaths, models: RecordingModelWorker) {
+  return async (signal?: AbortSignal, purpose: "batch" | "recording" = "batch") => {
     const assets = await resolveConfiguredRuntimeAssets({
       dataRoot: paths.dataRoot, packageRoot: PACKAGE_ROOT,
-    }, punctuationEnabled);
+      ...(signal === undefined ? {} : { signal }),
+    });
     const runtimeAssets = async () => assets;
     const fingerprint = assets.engineFingerprint;
-    const recording = createProductRecordingFactories({
-      expectedFingerprint: fingerprint,
-      inspectHelperSignature: createDshRecordingHelperSignatureInspector(context.subprocess),
-      packageRoot: PACKAGE_ROOT, runtimeAssets, subprocess: context.subprocess,
-    });
+    if (purpose === "recording") await models.prepare(assets, signal);
+    else await models.releaseIdle();
     return {
-      asr: createWorkerRunner(context, "asr", fingerprint, paths, runtimeAssets),
-      diarization: createWorkerRunner(context, "diarization", fingerprint, paths, runtimeAssets),
+      asr: createWorkerRunner(context, "asr", fingerprint, paths, runtimeAssets, models),
+      diarization: createWorkerRunner(context, "diarization", fingerprint, paths, runtimeAssets, models),
       engineFingerprint: fingerprint, processingIdentity: assets.processing!.identity,
-      recordingWorker: recording.worker,
+      recordingWorker: models.factory(assets),
     };
   };
 }
 
+function refreshSettings(context: Context): void {
+  try {
+    context.get("settings")?.describe({ redactSecrets: true });
+  } catch {
+    context.logger("dsh-asr").warn("SETTINGS_REFRESH_FAILED");
+  }
+}
+
 export async function apply(context: Context, config: ParsedConfig): Promise<void> {
+  context.on("internal/status", fiber => {
+    if (fiber === context.fiber && fiber.state === ACTIVE_FIBER_STATE) {
+      refreshSettings(context);
+    }
+  });
   const paths = resolveRuntimePaths(config);
   const lifetime: HostLifetime = {
     downloads: undefined,
+    models: undefined,
     application: undefined,
     lease: await acquireDataRootLease(paths.dataRoot),
     repository: undefined,
@@ -224,8 +240,11 @@ export async function apply(context: Context, config: ParsedConfig): Promise<voi
       runtimeAssets,
       subprocess: context.subprocess,
     });
+    const models = new RecordingModelWorker({ spawner: createDshWorkerSpawner(context.subprocess),
+      meetingsRoot: paths.managedAudioDirectory, workRoot: join(paths.dataRoot, "work") });
+    lifetime.models = models;
     const application = new MeetingApplication({
-      prepareRuntime: createRuntimePreparer(context, paths),
+      prepareRuntime: createRuntimePreparer(context, paths, models),
       asr: createWorkerRunner(context, "asr", fingerprint, paths, runtimeAssets),
       audioStore,
       dataRoot: paths.dataRoot,
@@ -251,13 +270,12 @@ export async function apply(context: Context, config: ParsedConfig): Promise<voi
           proxyKind: current.hf_proxy_kind.get() ?? (current.hf_proxy_url.get().trim() ? "http" : "mirror") };
       } });
     lifetime.downloads = downloads;
-    context.inject(["connection"], (webContext) => {
-      const connection = webContext.get("connection") as RecordingRpcConnection;
+    context.inject(["connection", "webServer"], (webContext) => {
+      const connection = recordingHttpConnection(webContext.connection, webContext.get("webServer") as RecordingWebServer);
       webContext.jobs.attachController("dsh-asr-recording-web");
-      const removeRpc = registerRecordingHostRpc(connection, application, () => readModelSettings(
-        { dataRoot: paths.dataRoot, packageRoot: PACKAGE_ROOT },
-        (context.fiber.config as ParsedConfig).punctuation_enabled.get(),
-      ), downloads);
+      const removeRpc = registerRecordingHostRpc(connection, application, signal => readModelSettings(
+        { dataRoot: paths.dataRoot, packageRoot: PACKAGE_ROOT, signal },
+      ), downloads, recording.permissions, signal => application.prepareRecording(signal));
       webContext.effect(() => removeRpc, "dsh-asr: recording client RPC");
     });
   } catch (error) {

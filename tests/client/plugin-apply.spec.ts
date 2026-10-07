@@ -14,8 +14,9 @@ it("注册 DSH 原生 Meeting @ source、locale 与既有录音浮层", () => {
     return vi.fn();
   });
   const registerLocale = vi.fn(() => vi.fn());
-  const registerSlot = vi.fn(() => vi.fn());
+  const registerSlot = vi.fn((_options: { name: string; key?: string }) => vi.fn());
   const connection = { rpc: { call: vi.fn() } };
+  const getConfigForm = vi.fn(() => ({}));
   const meetingId = "11111111-1111-4111-8111-111111111111";
   const mention = `@[产品周会](dsh-meeting:${meetingId})`;
   const scope = {};
@@ -27,6 +28,7 @@ it("注册 DSH 原生 Meeting @ source、locale 与既有录音浮层", () => {
   };
   const ctx = {
     get: vi.fn((name: string) => name === "connection" ? connection : undefined),
+    configForms: { get: getConfigForm },
     effect: vi.fn((factory: () => unknown) => factory()),
     inputTriggers: { registerSource },
     conversation: {
@@ -56,9 +58,14 @@ it("注册 DSH 原生 Meeting @ source、locale 与既有录音浮层", () => {
 
   apply(ctx);
 
+  expect(registerSlot.mock.calls[0]?.[0]).toMatchObject({
+    name: "plugins.bundle.config", key: "@huliux/dsh-asr-plugin",
+  });
+
   expect(inject).toEqual([
-    "slots", "connection", "inputTriggers", "locale", "sessions", "uiWorkspace", "conversation",
+    "slots", "connection", "inputTriggers", "locale", "sessions", "uiWorkspace", "conversation", "configForms",
   ]);
+  expect(getConfigForm).toHaveBeenCalledExactlyOnceWith("dsh-asr");
   expect(registerLocale).toHaveBeenCalledTimes(2);
   expect(registerSource).toHaveBeenCalledOnce();
   expect(source).toMatchObject({ trigger: "@", name: "meeting-reference" });

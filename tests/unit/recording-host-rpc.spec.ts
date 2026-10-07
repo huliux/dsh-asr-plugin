@@ -122,9 +122,11 @@ it("serves model status only through the existing loopback channel and rejects p
   registerRecordingHostRpc({ rpc: { handle: (_channel, value) => {
     handler = value; return async () => {};
   } } }, {} as MeetingApplication, readStatus);
-  expect(await handler("models/status", {}, new AbortController().signal)).toEqual({ ok: true, value: status });
+  const signal = new AbortController().signal;
+  expect(await handler("models/status", {}, signal)).toEqual({ ok: true, value: status });
   expect(await handler("models/status", { data_dir: "/other" }, new AbortController().signal)).toMatchObject({ ok: false });
   expect(readStatus).toHaveBeenCalledOnce();
+  expect(readStatus).toHaveBeenCalledWith(signal);
 });
 
 it("uses fixed pack requests and never accepts download paths, sources or proxy credentials in RPC", async () => {
@@ -144,4 +146,48 @@ it("uses fixed pack requests and never accepts download paths, sources or proxy 
     expect(await handler("models/download/start", payload, signal)).toMatchObject({ ok: false });
   }
   expect(download.start).toHaveBeenCalledOnce();
+});
+
+it("serves permission diagnostics and accepts only the two fixed settings targets", async () => {
+  let handler!: Parameters<RecordingRpcConnection["rpc"]["handle"]>[1];
+  const permissions = {read: vi.fn(async () => ({microphone:"denied",system:"unverified"} as const)),
+    test: vi.fn(async () => ({microphone:"granted",system:"verified"} as const)),
+    require: vi.fn(async () => {}), openSettings: vi.fn(async () => {})};
+  registerRecordingHostRpc({rpc:{handle:(_channel,value)=>{handler=value;return async()=>{};}}},
+    {getRecordingState:()=>null} as unknown as MeetingApplication, undefined, undefined, permissions);
+  const signal = new AbortController().signal;
+  expect(await handler("permissions/status",{},signal)).toEqual({ok:true,value:{microphone:"denied",system:"unverified"}});
+  expect(await handler("permissions/test",{},signal)).toEqual({ok:true,value:{microphone:"granted",system:"verified"}});
+  for (const track of ["microphone","system"]) {
+    expect(await handler("permissions/open-settings",{track},signal)).toEqual({ok:true,value:null});
+  }
+  for (const payload of [{track:"other"},{track:"system",url:"file:///private"}]) {
+    expect(await handler("permissions/open-settings",payload,signal)).toMatchObject({ok:false});
+  }
+  expect(permissions.openSettings).toHaveBeenCalledTimes(2);
+  expect(await handler("permissions/test",{path:"/other"},signal)).toMatchObject({ok:false});
+});
+
+it("does not play a diagnostic tone during an active recording", async () => {
+  let handler!: Parameters<RecordingRpcConnection["rpc"]["handle"]>[1];
+  const permissions = {read:vi.fn(),test:vi.fn(),require:vi.fn(),openSettings:vi.fn()};
+  registerRecordingHostRpc({rpc:{handle:(_channel,value)=>{handler=value;return async()=>{};}}},
+    {getRecordingState:()=>({phase:"recording"})} as unknown as MeetingApplication, undefined, undefined, permissions);
+  expect(await handler("permissions/test",{},new AbortController().signal)).toMatchObject({
+    ok:false,error:{message:"ENGINE_BUSY"},
+  });
+  expect(permissions.test).not.toHaveBeenCalled();
+});
+
+it("prepares recording models without accepting paths or recording audio", async () => {
+  let handler!: Parameters<RecordingRpcConnection["rpc"]["handle"]>[1];
+  const prepare = vi.fn(async () => undefined);
+  const app = { getRecordingState: () => null } as unknown as MeetingApplication;
+  registerRecordingHostRpc({ rpc: { handle: (_channel, value) => {
+    handler = value; return async () => {};
+  } } }, app, undefined, undefined, undefined, prepare);
+  const signal = new AbortController().signal;
+  expect(await handler("models/prepare", {}, signal)).toEqual({ ok: true, value: null });
+  expect(await handler("models/prepare", { model_root: "/other" }, signal)).toMatchObject({ ok: false });
+  expect(prepare).toHaveBeenCalledExactlyOnceWith(signal);
 });

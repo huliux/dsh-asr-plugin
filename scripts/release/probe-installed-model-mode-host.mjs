@@ -76,16 +76,16 @@ async function postMeeting(meetingId) {
 async function importMeeting() {
   const startedAt = performance.now();
   const started = await value("meeting_import_transcribe", { path: audioPath, title: `Mode ${mode} import` });
-  await pluginFiber.update({ data_dir: dataRoot, punctuation_enabled: mode !== "enhanced" });
+  await pluginFiber.update({ data_dir: dataRoot, punctuation_enabled: true });
   const job = await value("job_output", { job_id: started.job_id, wait: true, timeout_ms: 600_000 });
   phase = "import_job_completion";
   if (job.job.status !== "completed") {
     const page = await value("meeting_get", { meeting_id: started.meeting_id });
     throw Object.assign(new Error("Import failed"), { code: page.meeting.error_code ?? "IMPORT_JOB_FAILED" });
   }
-  await pluginFiber.update({ data_dir: dataRoot, punctuation_enabled: mode === "enhanced" });
+  await pluginFiber.update({ data_dir: dataRoot, punctuation_enabled: false });
   return { ...await postMeeting(started.meeting_id), elapsedMs: Math.round(performance.now() - startedAt),
-    selectionChangeDidNotRestart: true };
+    legacyPreferenceIgnoredWithoutRestart: true };
 }
 
 async function recordMeeting() {
@@ -103,7 +103,7 @@ async function recordMeeting() {
   if (trackState?.state !== "on") throw Object.assign(new Error("System track not ready"),
     { code: trackState?.error_code ?? "SYSTEM_TRACK_NOT_READY" });
   phase = "recording_draft";
-  await pluginFiber.update({ data_dir: dataRoot, punctuation_enabled: mode !== "enhanced" });
+  await pluginFiber.update({ data_dir: dataRoot, punctuation_enabled: true });
   const playbackStarted = performance.now();
   playback = spawn("/usr/bin/afplay", [audioPath], { stdio: "ignore" });
   playback.on("error", () => undefined);
@@ -121,9 +121,9 @@ async function recordMeeting() {
   playback.kill("SIGTERM");
   assert(["completed", "partial"].includes(stopped.phase));
   assert(stopped.finalization_ms !== null && stopped.finalization_ms < 30_000);
-  await pluginFiber.update({ data_dir: dataRoot, punctuation_enabled: mode === "enhanced" });
+  await pluginFiber.update({ data_dir: dataRoot, punctuation_enabled: false });
   return { ...await postMeeting(started.meeting_id), draftRevision: live.revision,
-    draftElapsedMs, draftFresh: !live.stale, selectionChangeDidNotRestart: true,
+    draftElapsedMs, draftFresh: !live.stale, legacyPreferenceIgnoredWithoutRestart: true,
     audioThroughMs: live.audio_through_ms, finalizationMs: stopped.finalization_ms };
 }
 
@@ -132,18 +132,29 @@ try {
     "dsh-jobs-local", "dsh-subprocess-local"]) await context.plugin((await loadHost(name)).default);
   await context.plugin(ToolJobs, { completionDelivery: "quiet" });
   context.on("approval/request", () => Promise.resolve("allowed-once"));
-  context.provide("connection", { rpc: { handle(_channel, handler) {
-    rpc = handler; return async () => { rpc = undefined; };
-  } } });
+  const { HostConnectionService } = await loadHost("dsh-client-connection");
+  await context.plugin(ctx => {
+    new HostConnectionService(ctx, [], { isAuthenticated: () => true });
+  });
+  await context.plugin((await loadHost("dsh-host-webserver")).default, { host: "127.0.0.1", port: 0 });
+  const origin = `http://127.0.0.1:${context.get("webServer").port}`;
+  rpc = async (endpoint, payload, signal) => {
+    const response = await fetch(`${origin}/api/dsh-asr-recording/${endpoint}`, {
+      method: "POST", signal, headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "client-request", rpcId: "model-mode", method: `dsh-asr-recording/${endpoint}`, payload }),
+    });
+    assert.equal(response.status, 200);
+    return (await response.json()).result;
+  };
   agentFiber = context.plugin(() => undefined);
   agent.ctx = agentFiber.ctx;
   context.agents.register(agent);
   pluginFiber = await context.plugin(plugin, { data_dir: dataRoot,
-    ...(mode === "enhanced" ? { punctuation_enabled: true } : {}) });
+    punctuation_enabled: false });
   phase = "import";
   const imported = await importMeeting();
   phase = "recording";
-  const recording = await recordMeeting();
+  const recording = process.argv.includes("--import-only") ? null : await recordMeeting();
   process.stdout.write(`${JSON.stringify({ ok: true, mode, imported, recording })}\n`);
 } catch (error) {
   process.stdout.write(`${JSON.stringify({ ok: false, mode, phase, code: error?.code ?? "MODEL_MODE_JOURNEY_FAILED", assertion: error?.operator })}\n`);

@@ -1,27 +1,24 @@
 import { expect, it, vi } from "vitest";
-import { saveModelPreference } from "../../src/client/model-settings-client.js";
+import { readModelStatus } from "../../src/client/model-settings-client.js";
 
-it("refuses enabling invalid punctuation without writing DSH configuration", async () => {
-  const mutate = vi.fn();
-  const rpc = { call: vi.fn(async () => ({ ok: true, value: {
-    mode: "base", preference: null, inheritedLegacy: false, selectedReady: true,
-    base: { state: "ready", issues: [] }, punctuation: { state: "invalid", issues: [] },
-    native: { state: "ready", issues: [] }, dataDirectory: "/owned/data",
-  } })) };
-  expect(await saveModelPreference(rpc as never, { mutate } as never, true, 4)).toBe("not_ready");
-  expect(mutate).not.toHaveBeenCalled();
+const ready = { state: "ready", issues: [] };
+const status = { mode: "enhanced", preference: null, inheritedLegacy: false,
+  selectedReady: true, base: ready, punctuation: ready, native: ready, dataDirectory: "/owned/data" };
+
+it("reads automatic punctuation status without a configuration write", async () => {
+  const rpc = { call: vi.fn(async () => ({ ok: true, value: status })) };
+  expect(await readModelStatus(rpc as never)).toEqual(status);
+  expect(rpc.call).toHaveBeenCalledWith("/api", "dsh-asr-recording/models/status", {}, undefined);
 });
 
-
-it("saves a disabled preference with the captured DSH revision even when assets are missing", async () => {
-  const mutate = vi.fn(async () => true);
-  const rpc = { call: vi.fn() };
-  expect(await saveModelPreference(rpc as never, { mutate } as never, false, 7)).toBe("saved");
-  expect(rpc.call).not.toHaveBeenCalled();
-  expect(mutate).toHaveBeenCalledWith([{ op: "set", path: ["punctuation_enabled"], value: false }], 7);
+it("preserves grouped repair details without treating damaged punctuation as ready", async () => {
+  const damaged = { ...status, selectedReady: false, punctuation: { state: "invalid",
+    issues: [{ id: "punc-model", code: "ASSET_MISMATCH", action: "restage" }] } };
+  const rpc = { call: vi.fn(async () => ({ ok: true, value: damaged })) };
+  expect(await readModelStatus(rpc as never)).toEqual(damaged);
 });
 
-it("reports a refused DSH configuration write without claiming the mode changed", async () => {
-  const mutate = vi.fn(async () => false);
-  expect(await saveModelPreference({} as never, { mutate } as never, false, 2)).toBe("conflict");
+it("rejects invalid mode responses", async () => {
+  const rpc = { call: vi.fn(async () => ({ ok: true, value: { ...status, mode: "unknown" } })) };
+  await expect(readModelStatus(rpc as never)).rejects.toThrow("INVALID_RESPONSE");
 });

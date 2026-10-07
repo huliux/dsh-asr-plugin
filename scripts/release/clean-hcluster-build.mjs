@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 
 import { ClosedPilotNativeReleaseError } from "./closed-pilot-native-error.mjs";
+import { appleBuildEnvironment } from "./apple-build-environment.mjs";
 
 const HCLUSTER_SOURCE_FILES = Object.freeze([
   "binding.gyp",
@@ -25,7 +26,7 @@ const HCLUSTER_SOURCE_FILES = Object.freeze([
   "vendor/hcluster_napi.cpp",
 ]);
 const NODE_ADDON_API_VERSION = "8.5.0";
-const NODE_GYP_VERSION = "10.3.1";
+const NODE_GYP_VERSION = "12.4.0";
 
 export async function buildReproducibleHcluster({
   destinationPath,
@@ -80,7 +81,10 @@ async function resolveToolchain(repositoryRoot) {
   if (nodeGypPackage.version !== NODE_GYP_VERSION) {
     throw buildError(`node-gyp must be exactly ${NODE_GYP_VERSION}`);
   }
-  return { nodeAddonRoot, nodeGypScript: resolve(nodeGypRoot, "bin/node-gyp.js") };
+  let environment;
+  try { environment = appleBuildEnvironment(); }
+  catch (cause) { throw buildError(cause.message, cause); }
+  return { nodeAddonRoot, nodeGypScript: resolve(nodeGypRoot, "bin/node-gyp.js"), environment };
 }
 
 async function readPackageJson(path) {
@@ -108,9 +112,9 @@ async function buildOnce({ buildRoot, repositoryRoot, toolchain }) {
     throw buildError("hcluster temporary build root is not clean");
   }
   await copyBuildInputs({ buildRoot, repositoryRoot, toolchain });
-  await runProcess(process.execPath, [toolchain.nodeGypScript, "rebuild"], buildRoot);
+  await runProcess(process.execPath, [toolchain.nodeGypScript, "rebuild"], buildRoot, toolchain.environment);
   const binaryPath = resolve(buildRoot, "build/Release/hcluster.node");
-  await runProcess("/usr/bin/strip", ["-S", binaryPath], buildRoot);
+  await runProcess("/usr/bin/strip", ["-S", binaryPath], buildRoot, toolchain.environment);
   const bytes = await readFile(binaryPath);
   return { binaryPath, bytes, identity: identify(bytes) };
 }
@@ -156,19 +160,19 @@ function assertReproducibleResults(results, expectedIdentity) {
   }
 }
 
-async function runProcess(command, args, cwd) {
-  const result = await collectProcess(command, args, cwd);
+async function runProcess(command, args, cwd, env) {
+  const result = await collectProcess(command, args, cwd, env);
   if (result.code !== 0) {
     throw buildError(`hcluster build command failed with status ${String(result.code)}`);
   }
 }
 
-function collectProcess(command, args, cwd) {
+function collectProcess(command, args, cwd, env) {
   return new Promise((fulfill, reject) => {
     const child = spawn(command, args, {
       cwd,
       env: {
-        ...process.env,
+        ...env,
         MACOSX_DEPLOYMENT_TARGET: "13.5",
         ZERO_AR_DATE: "1",
       },

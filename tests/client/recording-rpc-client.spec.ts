@@ -141,8 +141,8 @@ it("严格解析 Meeting reference 候选并使用 namespaced endpoint", async (
     duration_ms: null,
   }]);
   expect(connection.call).toHaveBeenCalledWith(
-    "/dsh-asr-recording",
-    "references/candidates",
+    "/api",
+    "dsh-asr-recording/references/candidates",
     { session_id: "session-1", locale: "zh-CN", query: "产品" },
     signal,
   );
@@ -167,8 +167,8 @@ it("提交前通过 resolve endpoint 重验单个 Meeting", async () => {
     meeting_id: candidate.meeting_id,
   })).resolves.toEqual(candidate);
   expect(connection.call).toHaveBeenCalledWith(
-    "/dsh-asr-recording",
-    "references/resolve",
+    "/api",
+    "dsh-asr-recording/references/resolve",
     {
       locale: "zh-CN",
       meeting_id: candidate.meeting_id,
@@ -193,4 +193,12 @@ it("接受 Meeting 处理阶段而不把它误当成录音控制阶段", async (
     session_id: "session-1",
     locale: "zh-CN",
   })).resolves.toEqual([candidate]);
+});
+
+it("prepares models with a fixed empty request and validates the acknowledgement", async () => {
+  const connection = rpc(null);
+  const signal = new AbortController().signal;
+  await expect(new RecordingRpcClient(connection).prepareModels(signal)).resolves.toBeUndefined();
+  expect(connection.call).toHaveBeenCalled();
+  await expect(new RecordingRpcClient(rpc({ path: "/other" })).prepareModels()).rejects.toThrow("INVALID_RESPONSE");
 });

@@ -461,3 +461,41 @@ it("keeps recording when a pending track-control request disconnects", async () 
   changed.resolve(helper.session.snapshot());
   await stillRecording;
 });
+
+it("rejects recording before creating a meeting or starting capture when permission checks fail", async () => {
+  const helper = helperFactory();
+  const harness = await createMeetingApplicationHarness({ recording: {
+    helper: helper.factory, worker: workerFactory(),
+    checkPermissions: async () => { throw Object.assign(new Error("permission required"), { code: "MICROPHONE_PERMISSION_REQUIRED" }); },
+  } });
+  harnesses.push(harness);
+  await expect(harness.application.controlRecording({ action: "start" })).rejects.toMatchObject({code:"MICROPHONE_PERMISSION_REQUIRED"});
+  expect(helper.factory.start).not.toHaveBeenCalled();
+  expect(harness.application.getRecordingState()).toBeNull();
+  expect(harness.repository.getMeeting(MEETING_ID)).toBeNull();
+});
+
+it("checks permissions while assets prepare, then cancels the other gate on failure", async () => {
+  const preparation = deferred<never>();
+  let permissionStarted = false;
+  let permissionCancelled = false;
+  const harness = await createMeetingApplicationHarness({
+    prepareRuntime: async () => preparation.promise,
+    recording: { helper: helperFactory().factory, worker: workerFactory(),
+      checkPermissions: async signal => {
+        permissionStarted = true;
+        await new Promise<void>(resolve => signal!.addEventListener("abort", () => {
+          permissionCancelled = true; resolve();
+        }, { once: true }));
+      } },
+  });
+  harnesses.push(harness);
+  const starting = harness.application.controlRecording({ action: "start" });
+  void starting.catch(() => undefined);
+  await new Promise(resolve => setImmediate(resolve));
+  try { expect(permissionStarted).toBe(true); }
+  finally { preparation.reject(new Error("MODEL_NOT_READY")); }
+  await expect(starting).rejects.toThrow("MODEL_NOT_READY");
+  expect(permissionCancelled).toBe(true);
+  expect(harness.application.getRecordingState()).toBeNull();
+});

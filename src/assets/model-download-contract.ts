@@ -9,9 +9,13 @@ export interface ModelDownloadStatus {
   readonly errorCode: string | null;
 }
 export interface ModelDownloadSettings {
-  readonly route: "direct" | "proxy";
+  readonly route: "default" | "direct" | "proxy";
   readonly proxyUrl?: string;
   readonly proxyKind?: "mirror" | "http";
+}
+export function customModelProxy(settings: ModelDownloadSettings): string | undefined {
+  if (settings.proxyKind === "mirror" || settings.route === "direct" || !settings.proxyUrl?.trim()) return undefined;
+  return modelProxyUrl(settings.proxyUrl);
 }
 export class ModelDownloadError extends Error {
   constructor(readonly code: string) { super(code); }

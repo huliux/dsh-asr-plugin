@@ -15,6 +15,35 @@ import { createMeetingApplicationHarness } from "../helpers/meeting-application-
 import { commitMeeting, meetingId } from "../helpers/meeting-repository-fixture.js";
 
 const installedDsh = process.env.DSH_SPILL_PACKAGE_JSON;
+type MeetingContext = Awaited<ReturnType<typeof createMeetingApplicationHarness>>["context"];
+
+async function readDeliveredPages(context: MeetingContext, agent: Agent, texts: string[]): Promise<string> {
+  const received: string[] = [];
+  let cursor: string | undefined;
+  let firstCursor: string | undefined;
+  do {
+    const result = await context.tools.execute({
+      agent, callId: ToolCallId(`delivery-${received.length}`), name: "meeting_get",
+      arguments: { meeting_id: meetingId(90), projection: "agent", ...(cursor ? { cursor } : {}) },
+      signal: new AbortController().signal,
+    });
+    expect(result.isError).toBe(false);
+    const text = result.content.map((block) => block.type === "text" ? block.text : "").join("");
+    expect(text.includes("Full formatted result stored at:")).toBe(false);
+    expect(text).toContain("核对同一版本各页 seq 从 0 连续到 total_segments-1");
+    const page = JSON.parse(text.split("<meeting_data>\n")[1]!.split("\n</meeting_data>")[0]!);
+    for (const segment of page.transcript.segments) {
+      expect(segment.seq).toBe(received.length);
+      received.push(segment.text);
+    }
+    cursor = page.transcript.next_cursor ?? undefined;
+    firstCursor ??= cursor;
+    expect(page.transcript.coverage.complete).toBe(cursor === undefined);
+    expect(page.transcript.coverage.rendered_bytes).toBe(Buffer.byteLength(text));
+  } while (cursor !== undefined);
+  expect(received).toEqual(texts);
+  return firstCursor!;
+}
 
 it.skipIf(installedDsh === undefined)("真实 DSH spill 后 Agent 仍能逐页读取全部原稿", async () => {
   const resolveInstalled = createRequire(installedDsh!);
@@ -34,30 +63,7 @@ it.skipIf(installedDsh === undefined)("真实 DSH spill 后 Agent 仍能逐页�
     const agent = { ctx: context, session: Session.create(SessionId("delivery-test")) } as Agent;
     const texts = Array.from({ length: 1_499 }, (_, seq) => `${seq}: 中文 <&> English 🎙`.repeat(5));
     commitMeeting(harness.repository, 90, { texts });
-    const received: string[] = [];
-    let cursor: string | undefined;
-    let firstCursor: string | undefined;
-    do {
-      const result = await context.tools.execute({
-        agent, callId: ToolCallId(`delivery-${received.length}`), name: "meeting_get",
-        arguments: { meeting_id: meetingId(90), projection: "agent", ...(cursor ? { cursor } : {}) },
-        signal: new AbortController().signal,
-      });
-      expect(result.isError).toBe(false);
-      const text = result.content.map((block) => block.type === "text" ? block.text : "").join("");
-      expect(text.includes("Full formatted result stored at:")).toBe(false);
-      expect(text).toContain("核对同一版本各页 seq 从 0 连续到 total_segments-1");
-      const page = JSON.parse(text.split("<meeting_data>\n")[1]!.split("\n</meeting_data>")[0]!);
-      for (const segment of page.transcript.segments) {
-        expect(segment.seq).toBe(received.length);
-        received.push(segment.text);
-      }
-      cursor = page.transcript.next_cursor ?? undefined;
-      firstCursor ??= cursor;
-      expect(page.transcript.coverage.complete).toBe(cursor === undefined);
-      expect(page.transcript.coverage.rendered_bytes).toBe(Buffer.byteLength(text));
-    } while (cursor !== undefined);
-    expect(received).toEqual(texts);
+    const firstCursor = await readDeliveredPages(context, agent, texts);
     const skippedCursor = encodeTranscriptCursor({
       meetingId: meetingId(90), version: 1, projection: "agent", lastSeq: 499,
       nextSegmentDigest: decodeTranscriptCursor(firstCursor!).nextSegmentDigest!,

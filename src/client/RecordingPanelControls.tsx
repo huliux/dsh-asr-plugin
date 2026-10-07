@@ -11,7 +11,8 @@ export function RecordingIcon({ name }: { readonly name: keyof typeof recordingI
 }
 
 function Wave({ view, translate }: Pick<PanelViewProps, "view" | "translate">) {
-  const moving = view?.phase === "recording" && (view.mic.state === "on" || view.system.state === "on");
+  const moving = view?.phase === "recording" && [view.mic, view.system]
+    .some(track => track.state === "on" && track.errorCode === null);
   return <svg className={styles.wave} data-recording-wave={moving ? "moving" : "still"}
     viewBox="0 0 18 18" width="18" height="18" role="img" aria-label={translate("panel.activity")}>
     {recordingWavePaths.map((path, index) => <path key={index} d={path} fill="currentColor" />)}
@@ -23,7 +24,8 @@ function MainControl({ pending, pendingAction, run, translate, view }: Pick<Pane
   const busyPhase = pendingAction === "start" ? "starting" : pendingAction === "stop" ? "finalizing"
     : view?.phase === "starting" || view?.phase === "finalizing" ? view.phase : null;
   const busy = busyPhase !== null;
-  const label = translate(busyPhase !== null ? `phase.${busyPhase}` : recording ? "panel.stop" : view ? "panel.startNew" : "panel.start");
+  const stopping = busyPhase === "finalizing" && view?.recordingEndedAtMs == null;
+  const label = translate(stopping ? "panel.stopping" : busyPhase !== null ? `phase.${busyPhase}` : recording ? "panel.stop" : view ? "panel.startNew" : "panel.start");
   return <Tooltip label={label}>
     <Button variant="ghost" className={styles.mainControl} aria-label={label}
       disabled={pending || busy} onClick={() => void run(recording && view

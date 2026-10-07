@@ -16,25 +16,21 @@
   border-radius: var(--dsw-radius-xl);
   background: var(--dsw-alias-settings-card-fill);
 }
-.heading, .modelRow, .modelTitle, .runtimeRow, .preference, .progressHeading, .saveRow {
+.heading, .modelRow, .modelTitle, .runtimeRow, .progressHeading, .saveRow {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-.heading, .modelRow, .runtimeRow, .preference, .progressHeading { justify-content: space-between; }
+.heading, .modelRow, .runtimeRow, .progressHeading { justify-content: space-between; }
 .heading { padding: 4px 0 8px; align-items: flex-start; }
-.heading > div, .modelCopy, .preference > div { min-width: 0; }
-.heading > button, .modelRow > button, .preference > button { flex-shrink: 0; }
+.heading > div, .modelCopy { min-width: 0; }
+.heading > button, .modelRow > button { flex-shrink: 0; }
 .title { margin: 0 0 4px; font-size: 14px; font-weight: 600; line-height: 22px; }
 .label { font-weight: 500; }
 .description { margin: 0; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 18px; }
 .modelBlock { padding: 2px 0 18px; }
 .modelBlock + .modelBlock { padding-top: 18px; border-top: 0.5px solid var(--dsw-alias-border-l1); }
 .modelTitle { flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
-.modelPreference { margin-top: 16px; padding: 12px; border-radius: var(--dsw-radius-md); background: var(--dsw-alias-bg-layer-1); }
-.preference { align-items: flex-start; }
-.preference .description { margin-top: 3px; }
-.preference > button { margin-top: 2px; }
 .runtimeRow { padding-top: 12px; border-top: 0.5px solid var(--dsw-alias-border-l1); }
 .loading, .notice, .error {
   display: flex; align-items: baseline; gap: 8px; margin: 12px 0 0;
@@ -46,6 +42,8 @@
 .command { display: grid; gap: 6px; min-width: 0; }
 .diagnostics { padding-left: 18px; margin: 0; overflow-wrap: anywhere; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 18px; }
 .diagnostics:empty { display: none; }
+.diagnosticGroups { display: grid; gap: 14px; margin: 16px 0; }
+.diagnosticGroup + .diagnosticGroup { border-top: 0.5px solid var(--dsw-alias-border-l1); padding-top: 14px; }
 .helpHeading { width: fit-content; max-width: 100%; }
 .connectionSummary { margin-left: 12px; color: var(--dsw-alias-label-secondary); font-size: 12px; }
 .downloadRouting { display: grid; gap: 8px; margin-top: 16px; min-width: 0; }
@@ -65,3 +63,5 @@
 
 .proxyOptions { display: grid; gap: 8px; margin-top: 4px; }
 .proxyOptions a { width: fit-content; }
+.preparationSteps { display: grid; gap: 8px; list-style: none; margin: 4px 0 0; padding: 0; color: var(--dsw-alias-label-secondary); font-size: 12px; }
+.preparationSteps li { display: flex; align-items: center; gap: 8px; }

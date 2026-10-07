@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
 import { ClosedPilotNativeReleaseError } from "./closed-pilot-native-error.mjs";
+import { appleBuildEnvironment } from "./apple-build-environment.mjs";
 
 const SOURCE_FILES = Object.freeze([
   "binding.gyp",
@@ -17,7 +18,7 @@ const SOURCE_FILES = Object.freeze([
   ].map((name) => `vendor/kaldi-native-fbank/csrc/${name}`),
 ]);
 const NODE_ADDON_API_VERSION = "8.5.0";
-const NODE_GYP_VERSION = "10.3.1";
+const NODE_GYP_VERSION = "12.4.0";
 
 export async function buildReproducibleFbank({ destinationPath, expectedIdentity, repositoryRoot }) {
   assertRuntime();
@@ -69,7 +70,10 @@ async function resolveToolchain(repositoryRoot) {
   if (addon.version !== NODE_ADDON_API_VERSION || gyp.version !== NODE_GYP_VERSION) {
     throw buildError("fbank release build toolchain versions changed");
   }
-  return { addonRoot, gypScript: resolve(gypRoot, "bin/node-gyp.js") };
+  let environment;
+  try { environment = appleBuildEnvironment(); }
+  catch (cause) { throw buildError(cause.message, cause); }
+  return { addonRoot, gypScript: resolve(gypRoot, "bin/node-gyp.js"), environment };
 }
 
 async function readPackageJson(path) {
@@ -83,9 +87,9 @@ async function readPackageJson(path) {
 async function buildOnce({ buildRoot, repositoryRoot, toolchain }) {
   if ((await readdir(buildRoot)).length !== 0) throw buildError("fbank build root is not clean");
   await copyInputs({ buildRoot, repositoryRoot, toolchain });
-  await runProcess(process.execPath, [toolchain.gypScript, "rebuild"], buildRoot);
+  await runProcess(process.execPath, [toolchain.gypScript, "rebuild"], buildRoot, toolchain.environment);
   const binaryPath = resolve(buildRoot, "build/Release/fbank.node");
-  await runProcess("/usr/bin/strip", ["-S", binaryPath], buildRoot);
+  await runProcess("/usr/bin/strip", ["-S", binaryPath], buildRoot, toolchain.environment);
   const bytes = await readFile(binaryPath);
   return { binaryPath, bytes, identity: identify(bytes) };
 }
@@ -118,9 +122,9 @@ function assertReproducible(results, expected) {
   }
 }
 
-function runProcess(command, args, cwd) {
+function runProcess(command, args, cwd, env) {
   return new Promise((fulfill, reject) => {
-    const child = spawn(command, args, { cwd, stdio: ["ignore", "ignore", "ignore"] });
+    const child = spawn(command, args, { cwd, env, stdio: ["ignore", "ignore", "ignore"] });
     child.once("error", (cause) => reject(buildError("fbank build command failed", cause)));
     child.once("close", (code) => code === 0 ? fulfill() :
       reject(buildError(`fbank build command failed with status ${String(code)}`)));

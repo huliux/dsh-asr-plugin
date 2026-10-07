@@ -1,3 +1,4 @@
+import type { RecordingPermissions } from "./permission-contract.js";
 import type { ModelDownloadStatus } from "../assets/model-download-contract.js";
 import type { ModelSettingsStatus } from "../assets/model-settings-contract.js";
 export const RECORDING_RPC_CHANNEL = "/dsh-asr-recording";
@@ -6,6 +7,14 @@ export const RECORDING_RPC_ENDPOINTS = [
   "control",
   "references/candidates",
   "references/resolve",
+  "models/status",
+  "models/prepare",
+  "models/download/status",
+  "models/download/start",
+  "models/download/cancel",
+  "permissions/status",
+  "permissions/test",
+  "permissions/open-settings",
 ] as const;
 
 export type RecordingRpcEndpoint = (typeof RECORDING_RPC_ENDPOINTS)[number];
@@ -90,7 +99,7 @@ export interface MeetingReferenceRpcResolvePayload {
   readonly meeting_id: string;
 }
 
-export type RecordingRpcValue = ModelDownloadStatus | ModelSettingsStatus | RecordingRpcStateValue | RecordingRpcView
+export type RecordingRpcValue = RecordingPermissions | null | ModelDownloadStatus | ModelSettingsStatus | RecordingRpcStateValue | RecordingRpcView
   | readonly MeetingReferenceRpcCandidate[] | MeetingReferenceRpcCandidate;
 
 export type RecordingRpcResult<T = RecordingRpcValue> =

@@ -21,33 +21,43 @@ export function currentRuntime(): AssetRuntime {
   };
 }
 
-async function sha256Handle(handle: FileHandle, byteLength: number): Promise<string> {
+function assertNotAborted(signal?: AbortSignal): void {
+  if (signal?.aborted === true) {
+    throw new RuntimeAssetsError("STAGE_ABORTED", "Model validation was cancelled");
+  }
+}
+
+async function sha256Handle(handle: FileHandle, byteLength: number, signal?: AbortSignal): Promise<string> {
   const hash = createHash("sha256");
   let position = 0;
   while (position < byteLength) {
+    assertNotAborted(signal);
     const chunk = Buffer.allocUnsafe(Math.min(1024 * 1024, byteLength - position));
     const { bytesRead } = await handle.read(chunk, 0, chunk.byteLength, position);
+    assertNotAborted(signal);
     if (bytesRead === 0) break;
     hash.update(chunk.subarray(0, bytesRead));
     position += bytesRead;
   }
+  assertNotAborted(signal);
   if (position !== byteLength) {
     throw new RuntimeAssetsError("MODEL_NOT_READY", "Runtime asset changed during validation");
   }
   return hash.digest("hex");
 }
 
-export async function inspectRegularFile(path: string): Promise<{
+export async function inspectRegularFile(path: string, signal?: AbortSignal): Promise<{
   byteLength: number;
   sha256: string;
 }> {
+  assertNotAborted(signal);
   const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
     const file = await handle.stat();
     if (!file.isFile()) {
       throw new RuntimeAssetsError("MODEL_NOT_READY", "Runtime asset is not a regular file");
     }
-    return { byteLength: file.size, sha256: await sha256Handle(handle, file.size) };
+    return { byteLength: file.size, sha256: await sha256Handle(handle, file.size, signal) };
   } finally {
     await handle.close();
   }
@@ -70,13 +80,15 @@ export async function verifyAssetAtRoot(
   root: string,
   asset: AssetRecord,
   runtime: AssetRuntime,
+  signal?: AbortSignal,
 ): Promise<void> {
+  assertNotAborted(signal);
   assertRuntime(asset, runtime);
   const path = resolveAssetPath(root, asset);
   await assertAssetPathDirectories(root, asset);
   let file: { byteLength: number; sha256: string };
   try {
-    file = await inspectRegularFile(path);
+    file = await inspectRegularFile(path, signal);
   } catch (error) {
     const mapped = mapAssetPathError(error, asset.id);
     if (mapped !== undefined) throw mapped;

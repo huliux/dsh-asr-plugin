@@ -1,5 +1,6 @@
 import type { JobHandle, JobOutcome, JobRegistry } from "@deepseek-ai/dsh-jobs";
-import { ModelDownloadError, modelProxyUrl } from "./model-download-contract.js";
+import { ModelDownloadError, customModelProxy } from "./model-download-contract.js";
+import { AssetVerificationError } from "./verify-assets.js";
 import type { ModelDownloadControl, ModelDownloadPack, ModelDownloadSettings, ModelDownloadStatus } from "./model-download-contract.js";
 import { installDownloadedModels } from "./model-download-operation.js";
 import type { ModelDownloadTransport } from "./model-download-transport.js";
@@ -25,7 +26,7 @@ export class ModelDownloadController implements ModelDownloadControl {
     if (this.disposed) throw new ModelDownloadError("MODEL_DOWNLOAD_UNAVAILABLE");
     if (this.active !== undefined) throw new ModelDownloadError("MODEL_DOWNLOAD_BUSY");
     const settings = { ...this.input.settings() };
-    if (settings.route === "proxy" && settings.proxyKind !== "mirror") settings.proxyUrl = modelProxyUrl(settings.proxyUrl);
+    customModelProxy(settings);
     const abort = new AbortController();
     const id = this.input.jobs.start({ kind: "asr-model-download", label: `Install ASR ${pack} models`,
       outputLimitBytes: 1_024, run: job => {
@@ -53,9 +54,18 @@ export class ModelDownloadController implements ModelDownloadControl {
       this.view = { ...this.view, phase: "completed" };
       return { status: "completed" };
     } catch (error) {
-      const code = error instanceof ModelDownloadError ? error.code : "MODEL_DOWNLOAD_FAILED";
+      const code = downloadErrorCode(error);
       this.view = { ...this.view, phase: signal.aborted ? "cancelled" : "failed", errorCode: signal.aborted ? null : code };
       return { status: signal.aborted ? "killed" : "failed", detail: code };
     } finally { this.active = undefined; }
   }
+}
+
+function downloadErrorCode(error: unknown): string {
+  if (error instanceof ModelDownloadError || error instanceof AssetVerificationError) return error.code;
+  if (error instanceof Error && "code" in error) {
+    if (error.code === "ENOSPC") return "MODEL_DOWNLOAD_DISK_FULL";
+    if (["EACCES", "EPERM", "EROFS"].includes(String(error.code))) return "MODEL_DOWNLOAD_STORAGE_DENIED";
+  }
+  return "MODEL_DOWNLOAD_FAILED";
 }

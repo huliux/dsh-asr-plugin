@@ -289,7 +289,7 @@ function projectionValue(
   });
 }
 
-function selectWithinBudget(
+function selectWithinProjectionBudget(
   activeJobId: string | null,
   slice: CommittedTranscriptSlice,
   afterSeq: number,
@@ -453,7 +453,7 @@ class DefaultTranscriptProjection implements TranscriptProjection {
     }
     const activeJobId = this.activeJobIdFor(slice.meeting);
     if (slice.available && slice.resultStatus !== null) {
-      return selectWithinBudget(activeJobId, slice, boundary.afterSeq);
+      return selectWithinProjectionBudget(activeJobId, slice, boundary.afterSeq);
     }
     return {
       activeJobId,

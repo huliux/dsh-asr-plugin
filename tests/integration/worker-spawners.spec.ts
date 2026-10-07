@@ -119,4 +119,16 @@ describe("Worker spawners", () => {
       LANG: "zh_CN.UTF-8",
     });
   });
+
+  it("preserves Electron Node mode through the DSH subprocess environment", () => {
+    let environment: NodeJS.ProcessEnv | undefined;
+    const handle = { stdin: undefined, stdout: undefined, stderr: undefined,
+      done: Promise.resolve({ exitCode: 0, signal: null }),
+      terminate() {}, waitForExit: async () => true } satisfies WorkerProcessHandle;
+    const spawner = createDshWorkerSpawner({ spawn(spec) { environment = spec.env; return handle; } });
+    spawner.spawn({ argv: ["/desktop", "/worker.js"], cwd: "/plugin", graceMs: 500,
+      environment: createWorkerEnvironment({ ELECTRON_RUN_AS_NODE: "1", API_KEY: "must-not-leak" }) });
+    expect(environment?.ELECTRON_RUN_AS_NODE).toBe("1");
+    expect(environment?.API_KEY).toBeUndefined();
+  });
 });

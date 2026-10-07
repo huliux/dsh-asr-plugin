@@ -24,6 +24,16 @@ afterEach(async () => {
 });
 
 describe("closed-pilot pack inventory gate", () => {
+  it.each([
+    "locale/en.json", "locale/zh.json", "CONTRIBUTING.md",
+    "docs/model-assets.md", "docs/development.md", "docs/publishing.md",
+  ])("allows the curated public guide or metadata %s", async (path) => {
+    await expect(verifyClosedPilotPackInventory({
+      repositoryRoot: "/not-read-before-inventory-is-valid",
+      packedPaths: ["package.json", ...nativePaths, path],
+    })).rejects.not.toThrow(/forbidden member/i);
+  });
+
   it("checks source, manifest and license facts inside the packed artifact", async () => {
     const packageRoot = await mkdtemp(join(tmpdir(), "dsh-asr-packed-fbank-"));
     temporaryRoots.push(packageRoot);
@@ -71,6 +81,10 @@ describe("closed-pilot pack inventory gate", () => {
     "dist/probes/private-corpus.js",
     "dist/maintenance/model-pack-builder.js",
     "dist/../../data/meetings.sqlite",
+    "docs/intent.md",
+    "docs/design/mvp-prd.md",
+    "docs/research/private-review.md",
+    "locale/private.json",
   ])("rejects forbidden or private package member %s", async (forbiddenPath) => {
     await expect(verifyClosedPilotPackInventory({
       repositoryRoot: "/not-read-before-inventory-is-valid",

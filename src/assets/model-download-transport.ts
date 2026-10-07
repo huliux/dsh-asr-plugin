@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { createReadStream } from "node:fs";
+import fs from "node:fs";
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -67,7 +67,7 @@ async function request(transport: ModelDownloadTransport, input: DownloadFileInp
   await writeFile(headers, "", { mode: 0o600 });
   await writeFile(input.destination, "", { mode: 0o600 });
   const handle = transport.spawn({
-    argv: ["/usr/bin/curl", "--config", "-", "--silent", "--show-error", "--fail", "--proto", "=https",
+    argv: ["/usr/bin/curl", "-q", "--config", "-", "--silent", "--show-error", "--fail", "--proto", "=https",
       "--connect-timeout", "15", "--max-time", "900", "--speed-limit", "1", "--speed-time", "20", "--max-filesize", String(input.expectedBytes),
       "--write-out", "%{http_code}"], cwd: input.workRoot, graceMs: 2_000, signal: input.signal,
     stdio: { stdin: { data: config(input, url, headers) }, stdout: { maxBytes: 128 }, stderr: { maxBytes: 1_024 } },
@@ -77,6 +77,7 @@ async function request(transport: ModelDownloadTransport, input: DownloadFileInp
   const outcome = await progressWhileRunning(handle, input);
   if (input.signal.aborted) throw new ModelDownloadError("MODEL_DOWNLOAD_CANCELLED");
   if (outcome.exitCode === 63) throw new ModelDownloadError("MODEL_DOWNLOAD_TOO_LARGE");
+  if (outcome.exitCode === 23) throw new ModelDownloadError("MODEL_DOWNLOAD_WRITE_FAILED");
   if (outcome.exitCode !== 0) throw new ModelDownloadError("MODEL_DOWNLOAD_FAILED");
   if ((await stat(headers)).size > 65_536) throw new ModelDownloadError("MODEL_DOWNLOAD_HEADERS_INVALID");
   const text = await readFile(headers, "utf8");
@@ -86,7 +87,7 @@ async function request(transport: ModelDownloadTransport, input: DownloadFileInp
 async function downloadCandidateFile(transport: ModelDownloadTransport, input: DownloadFileInput): Promise<void> {
   const first = new URL(input.url);
   if (!["huggingface.co", "hf-mirror.com", "modelscope.cn"].includes(first.hostname)) throw new ModelDownloadError("MODEL_DOWNLOAD_SOURCE_INVALID");
-  if (first.hostname === "modelscope.cn" && input.proxyUrl !== undefined) throw new ModelDownloadError("MODEL_DOWNLOAD_SOURCE_INVALID");
+  if (first.hostname !== "huggingface.co" && input.proxyUrl !== undefined) throw new ModelDownloadError("MODEL_DOWNLOAD_SOURCE_INVALID");
   let url = first;
   for (let hop = 0; hop <= 8; hop++) {
     if (!allowed(url, first.hostname)) throw new ModelDownloadError("MODEL_DOWNLOAD_REDIRECT_INVALID");
@@ -96,7 +97,10 @@ async function downloadCandidateFile(transport: ModelDownloadTransport, input: D
       if (bytes !== input.expectedBytes) throw new ModelDownloadError("MODEL_DOWNLOAD_SIZE_MISMATCH");
       if (input.expectedSha256 !== undefined) {
         const hash = createHash("sha256");
-        for await (const chunk of createReadStream(input.destination)) hash.update(chunk);
+        for await (const chunk of fs.createReadStream(input.destination, { signal: input.signal })) {
+          input.signal.throwIfAborted();
+          hash.update(chunk);
+        }
         if (input.signal.aborted) throw new ModelDownloadError("MODEL_DOWNLOAD_CANCELLED");
         if (hash.digest("hex") !== input.expectedSha256) throw new ModelDownloadError("MODEL_DOWNLOAD_HASH_MISMATCH");
       }

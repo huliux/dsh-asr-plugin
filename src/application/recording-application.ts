@@ -68,7 +68,8 @@ export interface MeetingLiveSegment {
 }
 
 export interface RecordingApplicationDependencies {
-  readonly prepareRuntime?: () => Promise<MeetingRuntimeSnapshot>;
+  readonly checkPermissions?: (signal?: AbortSignal) => Promise<void>;
+  readonly prepareRuntime?: (signal?: AbortSignal, purpose?: "batch" | "recording") => Promise<MeetingRuntimeSnapshot>;
   readonly audioStore: ManagedAudioStore;
   readonly engineFingerprint: string;
   readonly generateId: () => string;
@@ -167,11 +168,26 @@ export class RecordingApplication {
     this.lastSession = null;
   }
 
+  private async admitStart(signal?: AbortSignal) {
+    const controller = new AbortController();
+    const admissionSignal = signal === undefined ? controller.signal
+      : AbortSignal.any([signal, controller.signal]);
+    const preparation = Promise.resolve().then(() => this.dependencies.prepareRuntime?.(admissionSignal, "recording"));
+    const permission = Promise.resolve().then(() => this.dependencies.checkPermissions?.(admissionSignal));
+    try {
+      const [runtime] = await Promise.all([preparation, permission]);
+      return runtime;
+    } catch (error) {
+      controller.abort();
+      await Promise.allSettled([preparation, permission]);
+      throw error;
+    }
+  }
+
   private async start(input: Extract<RecordingControlInput, { action: "start" }>): Promise<RecordingSessionView> {
     this.host.requireIdle();
     if (input.signal?.aborted) throw new RecordingSessionError("CANCELLED_BY_USER");
-    const runtime = this.dependencies.prepareRuntime === undefined
-      ? undefined : await this.dependencies.prepareRuntime();
+    const runtime = await this.admitStart(input.signal);
     this.host.requireIdle();
     if (input.signal?.aborted) throw new RecordingSessionError("CANCELLED_BY_USER");
     const requestWallClockMs = Math.max(1, Math.trunc(this.dependencies.now()));

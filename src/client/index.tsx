@@ -1,5 +1,6 @@
 import type {} from "@deepseek-ai/dsh-client-ui-plugin-manager/client";
-import { ModelSettingsPage } from "./ModelSettingsPage.js";
+import { ModelSettingsBundle } from "./ModelSettingsBundle.js";
+import type {} from "@deepseek-ai/dsh-client-ui-settings/client";
 import { MODEL_SETTINGS_NAMESPACE, modelZh, modelEn } from "./model-settings-locales.js";
 import { currentSessionId } from "./current-session.js";
 import type {} from "@deepseek-ai/dsh-api-session-controller/client";
@@ -27,7 +28,7 @@ import {
 import { RecordingRpcClient } from "./recording-rpc-client.js";
 
 export const inject = [
-  "slots", "connection", "inputTriggers", "locale", "sessions", "uiWorkspace", "conversation",
+  "slots", "connection", "inputTriggers", "locale", "sessions", "uiWorkspace", "conversation", "configForms",
 ];
 
 function hasMeetingReference(ctx: ClientContext, sessionId: string, meetingId: string): boolean {
@@ -69,10 +70,13 @@ export function apply(ctx: ClientContext): void {
   );
   ctx.effect(() => ctx.locale.register(MODEL_SETTINGS_NAMESPACE, { zh: modelZh, en: modelEn }),
     "dsh-asr: model settings dictionaries");
-  ctx.slots.inject("plugins.row.config", () => ctx.slots.register({
-    name: "plugins.row.config", key: "@huliux/dsh-asr-plugin#dsh-asr", locale: MODEL_SETTINGS_NAMESPACE,
-  }, ({ form, t, view }) => view === "summary" ? t("summary")
-    : <ModelSettingsPage form={form} rpc={connection.rpc} t={t} />));
+  ctx.slots.inject("plugins.bundle.config", () => {
+    const source = ctx.configForms.get<Record<string, unknown>>("dsh-asr");
+    return ctx.slots.register({
+      name: "plugins.bundle.config", key: "@huliux/dsh-asr-plugin", locale: MODEL_SETTINGS_NAMESPACE,
+    }, ({ t, view }) => view === "summary" ? t("summary")
+      : <ModelSettingsBundle source={source} rpc={connection.rpc} t={t} />);
+  });
   ctx.slots.inject("shell.overlay", () => ctx.slots.register({
     name: "shell.overlay",
     id: "dsh-asr-recording",

@@ -1,12 +1,14 @@
 {
   "name": "@huliux/dsh-asr-plugin",
-  "version": "0.1.0-alpha.18",
+  "description": "Local recording and meeting transcription for DSH on macOS (Apple Silicon only)",
+  "version": "0.1.1",
+  "private": true,
   "license": "Apache-2.0",
   "type": "module",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
     "access": "public",
-    "tag": "next",
+    "tag": "latest",
     "executableFiles": [
       "dist/recording-helper/DSHASRRecordingHelper.app/Contents/MacOS/DSHASRRecordingHelper",
       "dist/recording-helper/DSHASRRecordingHelper.app/Contents/Helpers/dsh-asr-capture-mic",
@@ -27,18 +29,24 @@
       "types": "./dist/client-types/client/index.d.ts",
       "default": "./dist/client.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
   },
   "files": [
     "dist",
     "!dist/maintenance/**",
     "!dist/probes/**",
     "cordis.patch.yml",
+    "locale/*.json",
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
     "third_party",
-    "README.zh-CN.md"
+    "README.zh-CN.md",
+    "CONTRIBUTING.md",
+    "docs/model-assets.md",
+    "docs/development.md",
+    "docs/publishing.md"
   ],
   "dsh": {
     "client": {
@@ -70,13 +78,6 @@
   "cpu": [
     "arm64"
   ],
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@deepseek-ai/dsh-subprocess-local",
-      "koffi",
-      "node-pty"
-    ]
-  },
   "scripts": {
     "build": "node scripts/clean-build.mjs && tsc -p tsconfig.build.json && tsc -p tsconfig.client.build.json && tsdown --config tsdown.config.ts && node scripts/copy-build-assets.mjs",
     "build:closed-pilot": "pnpm run build && node scripts/materialize-closed-pilot-natives.mjs && node scripts/build-recording-helper.mjs --public-release && node scripts/verify-closed-pilot-pack.mjs",
@@ -94,14 +95,13 @@
     "probe:p0-05:cancel": "pnpm run build && node scripts/probe-worker-cancellation.mjs data/p0-wav/worker-smoke.wav",
     "probe:p0-07:config": "node scripts/probe-dsh-config.mjs",
     "probe:p0-07": "pnpm run build && pnpm run probe:p0-07:config && DSH_RUN_DSH_ASSEMBLED=1 vitest run tests/integration/dsh-assembled.spec.ts",
-    "probe:native:fbank": "pnpm run build:native:fbank && DSH_RUN_FBANK_REBUILD=1 vitest run tests/integration/fbank-rebuild.spec.ts",
+    "probe:native:fbank": "pnpm run build:closed-pilot && pnpm run build:native:fbank && DSH_RUN_FBANK_REBUILD=1 vitest run tests/integration/fbank-rebuild.spec.ts",
     "probe:native:recording-helper": "pnpm run build:native:recording-helper && DSH_RUN_RECORDING_HELPER_REBUILD=1 vitest run tests/integration/recording-helper-rebuild.spec.ts",
     "probe:native:recording-helper:release": "pnpm run build:closed-pilot && DSH_RUN_PUBLIC_HELPER_RELEASE=1 vitest run tests/integration/public-recording-helper-release.spec.ts",
     "probe:p1a-02": "DSH_RUN_MANAGED_AUDIO_REAL=1 vitest run tests/integration/managed-audio-real.spec.ts",
     "probe:p1a-04": "pnpm run build:closed-pilot && DSH_RUN_P1A_APPLICATION_REAL=1 vitest run tests/integration/meeting-application-real.spec.ts",
     "probe:p1a-05": "pnpm run build:closed-pilot && node scripts/probe-host-restart.mjs && vitest run tests/integration/meeting-application-lifecycle.spec.ts",
     "probe:p1a-06": "pnpm run build:closed-pilot && DSH_RUN_P1A_PLUGIN_BUILT=1 vitest run tests/integration/plugin-assembly.spec.ts tests/integration/meeting-tools.spec.ts",
-    "probe:p1a": "pnpm run build:closed-pilot && node scripts/prepare-p1a-fixtures.mjs && DSH_RUN_P1A_PLUGIN_BUILT=1 DSH_RUN_P1A_E2E=1 vitest run tests/integration/plugin-assembly.spec.ts tests/integration/meeting-tools.spec.ts tests/integration/p1a-e2e.spec.ts && node scripts/probe-host-restart.mjs && vitest run tests/integration/meeting-application-lifecycle.spec.ts",
     "probe:p1b-01:sources": "pnpm run build && node scripts/probe-public-assets.mjs",
     "probe:p1b-03": "pnpm run build && node scripts/probe-data-root-lease.mjs",
     "probe:p1b": "pnpm run build:closed-pilot && node scripts/probe-p1b.mjs",
@@ -148,7 +148,7 @@
     "@types/node": "^22.20.0",
     "@types/react": "18.3.28",
     "node-addon-api": "8.5.0",
-    "node-gyp": "10.3.1",
+    "node-gyp": "12.4.0",
     "onnxruntime-common": "1.19.2",
     "react": "18.3.1",
     "tsdown": "0.21.5",

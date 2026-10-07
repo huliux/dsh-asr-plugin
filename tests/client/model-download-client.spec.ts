@@ -1,12 +1,13 @@
 import { expect, it, vi } from "vitest";
-import { readDownloadStatus, saveDownloadSettings } from "../../src/client/model-download-client.js";
+import { readDownloadStatus, saveDownloadSettings, startModelDownload } from "../../src/client/model-download-client.js";
 
 it("saves an independent HTTP proxy through DSH configuration with optimistic concurrency", async () => {
   const mutate = vi.fn(async () => true);
-  expect(await saveDownloadSettings({ mutate } as never, "proxy", "http://localhost:7890", 6)).toBe("saved");
+  expect(await saveDownloadSettings({ mutate } as never, "default", "http://localhost:7890", 6, "http")).toBe("saved");
   expect(mutate).toHaveBeenCalledWith([
-    { op: "set", path: ["hf_download_route"], value: "proxy" },
+    { op: "set", path: ["hf_download_route"], value: "default" },
     { op: "set", path: ["hf_proxy_url"], value: "http://localhost:7890/" },
+    { op: "set", path: ["hf_proxy_kind"], value: "http" },
   ], 6);
 });
 it("rejects credential-bearing and unsupported proxies without persisting them", async () => {
@@ -27,12 +28,32 @@ it("never stores proxy credentials even while selecting direct mode", async () =
   expect(mutate).not.toHaveBeenCalled();
 });
 
-it("selects the default mirror without requiring a custom proxy address", async () => {
+it("restores default downloads by clearing the custom proxy address", async () => {
   const mutate = vi.fn(async () => true);
-  expect(await saveDownloadSettings({ mutate } as never, "proxy", "", 3, "mirror")).toBe("saved");
+  expect(await saveDownloadSettings({ mutate } as never, "default", "", 3, "http")).toBe("saved");
   expect(mutate).toHaveBeenCalledWith([
-    { op: "set", path: ["hf_download_route"], value: "proxy" },
+    { op: "set", path: ["hf_download_route"], value: "default" },
     { op: "set", path: ["hf_proxy_url"], value: "" },
-    { op: "set", path: ["hf_proxy_kind"], value: "mirror" },
+    { op: "set", path: ["hf_proxy_kind"], value: "http" },
   ], 3);
+});
+
+it("saves the default connection before starting a download without a separate save click", async () => {
+  const events: string[] = [];
+  const mutate = vi.fn(async () => { events.push("save"); return true; });
+  const rpc = { call: vi.fn(async () => { events.push("download"); return { ok: true, value: {} }; }) };
+  expect(await startModelDownload(rpc as never, { mutate } as never, "base", {
+    route: "default", proxy: "", kind: "http", revision: 8,
+  }, () => events.push("saved"))).toBe("started");
+  expect(events).toEqual(["save", "saved", "download"]);
+  expect(rpc.call).toHaveBeenCalledWith("/api", "dsh-asr-recording/models/download/start", { pack: "base" }, undefined);
+});
+
+it("does not download when saving the selected connection conflicts", async () => {
+  const rpc = { call: vi.fn() };
+  const mutate = vi.fn(async () => false);
+  expect(await startModelDownload(rpc as never, { mutate } as never, "punctuation", {
+    route: "default", proxy: "", kind: "http", revision: 8,
+  })).toBe("conflict");
+  expect(rpc.call).not.toHaveBeenCalled();
 });

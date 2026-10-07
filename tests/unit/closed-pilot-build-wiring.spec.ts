@@ -39,7 +39,7 @@ describe("closed-pilot release command wiring", () => {
 
   it("routes real P1a/P1b product probes through the pilot build", async () => {
     const scripts = (await readPackageManifest()).scripts ?? {};
-    for (const name of ["probe:p1a-04", "probe:p1a-05", "probe:p1a-06", "probe:p1a"]) {
+    for (const name of ["probe:p1a-04", "probe:p1a-05", "probe:p1a-06"]) {
       expect(scripts[name], name).toContain("pnpm run build:closed-pilot");
     }
     if (scripts["probe:p1b"] !== undefined) {

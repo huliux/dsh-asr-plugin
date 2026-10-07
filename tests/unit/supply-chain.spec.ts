@@ -93,6 +93,30 @@ afterEach(async () => {
 });
 
 describe("readSupplyChainManifest", () => {
+  it("starts VAD at the mirror and uses a custom proxy only after upstream HF", async () => {
+    const manifest = await readSupplyChainManifest({ runtimeManifestPath: resolve("src/assets/manifest.json"),
+      supplyChainPath: resolve("src/assets/supply-chain.json") });
+    const source = manifest.assets.find(asset => asset.id === "vad-model");
+    if (source === undefined) throw new Error("VAD source missing");
+    const sources = modelDownloadSources(source, { route: "default", proxyKind: "http", proxyUrl: "http://localhost:7890" });
+    expect(sources.map(value => ({ host: new URL(value.url).hostname, proxy: value.proxyUrl }))).toEqual([
+      { host: "hf-mirror.com", proxy: undefined }, { host: "huggingface.co", proxy: undefined },
+      { host: "huggingface.co", proxy: "http://localhost:7890/" },
+    ]);
+    expect(modelDownloadSources(source, { route: "direct", proxyUrl: "http://localhost:7890" })).toEqual(sources.slice(0, 2));
+  });
+  it("does not add a proxy fallback to ModelScope-only weights", async () => {
+    const manifest = await readSupplyChainManifest({ runtimeManifestPath: resolve("src/assets/manifest.json"),
+      supplyChainPath: resolve("src/assets/supply-chain.json") });
+    for (const id of ["asr-model", "punc-model"]) {
+      const source = manifest.assets.find(asset => asset.id === id);
+      if (source === undefined) throw new Error("Weight source missing");
+      const sources = modelDownloadSources(source, { route: "default", proxyKind: "http", proxyUrl: "http://localhost:7890" });
+      expect(sources).toHaveLength(1);
+      expect(new URL(sources[0]!.url).hostname).toBe("modelscope.cn");
+      expect(sources[0]!.proxyUrl).toBeUndefined();
+    }
+  });
   it("prefers the verified domestic speaker copy while preserving its original license", async () => {
     const manifest = await readSupplyChainManifest({
       runtimeManifestPath: resolve("src/assets/manifest.json"),
@@ -102,15 +126,15 @@ describe("readSupplyChainManifest", () => {
     if (source === undefined) throw new Error("Speaker source missing");
     expect(source.license).toBe("CC-BY-4.0");
     expect(source.canonicalRepository).toBe("https://huggingface.co/Wespeaker/wespeaker-voxceleb-resnet34-LM");
-    expect(modelDownloadSources(source, { route: "proxy", proxyKind: "mirror" }))
+    expect(modelDownloadSources(source, { route: "default" }))
       .toEqual([
         { url: "https://modelscope.cn/api/v1/models/manyeyes/speaker_recognition_task_models_onnx_collection/repo?Revision=62cc6fed28b3413dd6351898a6fc5a5f616f5d8e&FilePath=wespeaker_en_voxceleb_resnet34_LM.onnx" },
-        { url: "https://huggingface.co/Wespeaker/wespeaker-voxceleb-resnet34-LM/resolve/f0c48c298fd835726c27956a5d617bad7115627e/voxceleb_resnet34_LM.onnx" },
         { url: "https://hf-mirror.com/Wespeaker/wespeaker-voxceleb-resnet34-LM/resolve/f0c48c298fd835726c27956a5d617bad7115627e/voxceleb_resnet34_LM.onnx" },
+        { url: "https://huggingface.co/Wespeaker/wespeaker-voxceleb-resnet34-LM/resolve/f0c48c298fd835726c27956a5d617bad7115627e/voxceleb_resnet34_LM.onnx" },
       ]);
   });
 
-  it("falls back to byte-verified HF support files before the selected mirror", async () => {
+  it("falls back to the pinned mirror before upstream HF support files", async () => {
     const manifest = await readSupplyChainManifest({
       runtimeManifestPath: resolve("src/assets/manifest.json"),
       supplyChainPath: resolve("src/assets/supply-chain.json"),
@@ -127,10 +151,10 @@ describe("readSupplyChainManifest", () => {
       if (source === undefined || url === undefined) throw new Error("Model source missing");
       expect(source.license).toBe("Apache-2.0");
       expect(new URL(source.canonicalRepository).hostname).toBe("modelscope.cn");
-      const sources = modelDownloadSources(source, { route: "proxy", proxyKind: "mirror" });
+      const sources = modelDownloadSources(source, { route: "default" });
       expect(new URL(sources[0]!.url).hostname).toBe("modelscope.cn");
       expect(sources.slice(1)).toEqual([
-        { url }, { url: url.replace("huggingface.co", "hf-mirror.com") },
+        { url: url.replace("huggingface.co", "hf-mirror.com") }, { url },
       ]);
     }
   });
