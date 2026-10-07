@@ -1,97 +1,57 @@
-# Publishing a reviewed candidate
+# Release preparation
 
-Publish only a reviewed public export. Do not publish a development checkout,
-private source receipt, model archive, database, recording, or historical docs.
-The development manifest intentionally retains `private: true`.
+This procedure applies to a specific source snapshot and package.
+The development manifest retains `private: true` to prevent accidental publication.
 
-## Freeze and review
+## Source and package checks
 
-1. Review source/licenses, pinned native/Helper identities and installed behavior.
-2. Qualify the exact package through the current DSH Plugins/CLI path. Record its
-   hash, host/runtime versions, applicable recording/model modes, meeting reference
-   and export Approval behavior. Signature checks are not permission acceptance.
-3. Verify first-download handling and ordinary macOS permission recovery. Existing
-   TCC grants and a synthetic update do not establish a fresh permission pass.
-4. Scan the public source, reachable history and packed files for secrets/private
-   data. Keep generated code binaries in the npm artifact and out of source Git.
-5. Confirm the final package identity/version and public source destination before
-   changing the release export's manifest. Remove `private` only in that reviewed
-   export, then repack and qualify the resulting exact archive. This prepares a
-   publishable candidate without authorizing an upload. The development checkout
-   stays private, and the old archive hash no longer applies.
+1. Start from a reviewed source snapshot and lockfile. Exclude credentials, user
+   data, model weights, generated binaries and machine-specific configuration.
+2. Retain the project license and all required third-party copyright, license,
+   provenance and modification notices.
+3. Install dependencies in an isolated checkout with
+   `pnpm install --frozen-lockfile`. Run `pnpm run build`, `pnpm run check`,
+   `pnpm run build:closed-pilot` and `git diff --check`.
+4. Prepare a separate release copy with the intended version and remove its
+   `private` guard. Confirm that repository and issue URLs refer to accessible
+   locations.
+5. Run `pnpm pack --pack-destination /absolute/path/to/output` in that copy.
+   Extract and inspect the archive; record its filename, size, SHA-256 and file
+   inventory. Scan source, package contents and Git metadata for secrets and
+   private material.
+6. Verify the exact archive in an isolated DSH installation on the target
+   platform. Include base and punctuation modes, meeting read/export behavior,
+   permission admission, non-silent capture, permission recovery and updates.
 
-## Source and model delivery
+Use the toolchain requirements in [development](development.md).
+A source/signature check does not establish capture permission or real audio
+output. Tests using a fixture do not establish recognition accuracy for other
+input conditions. Record the tested host, OS, hardware, model identities and
+the scope of each check.
 
-The intended source repository is `huliux/dsh-asr-plugin`. Start its public history
-from the reviewed source tree, retaining licenses and future development guidance.
-Do not push the development checkout's history. Generated binaries belong in the
-npm package. Model weights download directly from pinned upstream providers and
-are not uploaded to GitHub Releases.
+Evidence can apply to a subsequent package only when the relevant bytes,
+identities and environment remain unchanged and that correspondence is verified.
+Rebuild or requalify changed components. Preserve the tested archive and its
+inventory; publication must use those exact bytes.
 
-Qualify settings-page downloads against the fixed source inventory and installed
-asset checks. Preserve source licenses and SHA-256 verification. Three weights
-currently lack complete cross-provider coverage; record this as a known preview
-limitation rather than claiming universal automatic fallback. Historical messages
-can also show internal meeting links while identity/reference/export remain usable.
-These limitations are accepted for the first preview and remain tracked.
+## Model and Helper distribution
 
-Local base and punctuation archives are developer/offline alternatives. Build them
-with this version's legal material, stage each exact archive, run doctor and exercise
-base-only, both-installed/base-selected and enhanced modes. Do not upload these
-local archives as release assets. An older code-paired archive can be incompatible
-even when weights are unchanged.
+Models are obtained separately from pinned upstream sources. Keep weights out
+of Git, npm and GitHub Releases. Model archives require matching compatibility
+metadata, checksums and legal material; see [model assets](model-assets.md).
 
-Prepare source/code release assets and their SHA-256 checksums in a private draft.
-Check the uploaded files by downloading and hashing them before the publication
-decision. A private draft is not a public endpoint. Source visibility, Release publication and npm upload are separate decisions.
-For the initial npm-only preview, keep the source repository and Release draft
-private and publish only the qualified npm package. No project-hosted model
-endpoint is required.
+Public source builds produce an ad-hoc signed Helper. Developer ID signing and
+notarization are optional distribution choices requiring separate credential,
+signature, permission and update verification. Credentials stay outside source
+and published artifacts.
 
-## Account and registry
+## Publication and verification
 
-Use npm's official registry for publication, regardless of the registry used to
-install dependencies. The manifest fixes `publishConfig.registry` to
-`https://registry.npmjs.org/`, `access` to `public`, and the prerelease tag to `next`.
-Keep the pnpm `executableFiles` setting so the three Helper executables retain
-execution permissions; npm CLI currently warns about this pnpm-specific setting.
-Check the extracted archive modes rather than removing it to silence a warning.
+Obtain maintainer authorization for the exact artifact and registry tag.
+Publish from the verified archive with registry authentication and account
+requirements satisfied. Stable versions use `latest`; prereleases use `next`.
 
-```sh
-npm whoami --registry=https://registry.npmjs.org/
-npm publish /absolute/path/reviewed.tgz --dry-run --ignore-scripts \
-  --registry=https://registry.npmjs.org/ --access=public --tag=next
-```
-
-A dry run validates packing output but does not prove login, scope ownership,
-2FA, release approval or permission behavior. In particular, npm can dry-run a
-manifest that still contains `private: true`. Never treat that as publishability.
-
-For a personal first release, use interactive login and account 2FA rather than
-introducing a stored automation token. Do not commit credentials, print tokens or
-send passwords/OTP values through issues. The account owner performs authentication
-in their own terminal and browser:
-
-```sh
-npm login --auth-type=web --registry=https://registry.npmjs.org/
-npm whoami --registry=https://registry.npmjs.org/
-```
-
-For this personal scope, the verified username must be `huliux`. Login credentials
-are managed by npm in the owner's user configuration; do not copy that file into
-source, archives, reports or screenshots. Login alone does not verify package-name
-availability or authorize publication. Only after all acceptance items and the
-publication decision are complete, publish the qualified exact archive with the
-official registry, public access, `next`, and `--ignore-scripts`.
-
-## After publication
-
-Read the version and integrity from the official registry, then install the exact
-version through DSH in an isolated profile. Verify that it matches the reviewed
-artifact, that all three Helper executables remain executable, and that configuration,
-model preparation, recording and meeting handoff still work. Do not claim registry
-installation from a local tarball result. Keep `next` until a stable release is chosen.
-
-See npm's [scoped package guide](https://docs.npmjs.com/creating-and-publishing-scoped-public-packages/),
-[package metadata](https://docs.npmjs.com/cli/configuring-npm/package-json/), and
-[publishing authentication requirements](https://docs.npmjs.com/requiring-2fa-for-package-publishing-and-settings-modification/).
+After upload, verify anonymous registry metadata and integrity, download and
+compare the archive bytes, and install the exact registry version in an isolated
+DSH profile. Record any mismatch and stop further distribution until resolved.
+Repository visibility and GitHub Release assets require their own review.

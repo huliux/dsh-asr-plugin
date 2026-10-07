@@ -1,18 +1,34 @@
-# FBank native
+# FBank native add-on
 
-This directory contains the rebuildable source for `fbank.node`. The JavaScript boundary remains the single `extract(Float32Array)` function in `src/native/fbank.ts`. The addon implements only the fixed FBank algorithm and Node-API wrapper required by the product; it does not expose MFCC, Whisper, online extraction, configurable parameters, or another provider.
+The add-on exposes `extract(Float32Array)` through `src/native/fbank.ts`.
+It implements the fixed filter-bank feature extraction used by the inference
+Workers. Upstream source and modifications are documented in
+[vendor provenance](vendor/kaldi-native-fbank/UPSTREAM.md).
 
-## Source and fixed options
+## Parameters
 
-The core is vendored [`kaldi-native-fbank` v1.20.0](vendor/kaldi-native-fbank/UPSTREAM.md) with one documented mel accumulation compatibility patch. The wrapper fixes 16 kHz audio, 25 ms frames, 10 ms shift, Hamming window, 80 mel bins, zero dither, 0.97 pre-emphasis, DC removal, power spectrum, log FBank, and `snip_edges=true`. The Worker supplies complete PCM for each chunk, so the wrapper uses one-shot extraction. Upstream invariant checks remain enabled.
+Input is 16 kHz PCM. Extraction uses 25 ms frames, a 10 ms shift, a Hamming window,
+80 mel bins, zero dither, 0.97 pre-emphasis, DC removal, power spectrum, log FBank
+and `snip_edges=true`. Each Worker chunk is processed in one shot.
+Upstream invariant checks remain enabled.
 
-## Build
-
-On Apple Silicon macOS with Node 24, pnpm dependencies, and Xcode Command Line Tools:
+## Build and verification
 
 ```sh
 pnpm run build:native:fbank
 ```
 
-The output is the ignored `native/fbank/build/Release/fbank.node`. The release path in `build:closed-pilot` copies the committed source closure into two clean temporary build roots, rebuilds and strips both outputs, requires byte equality and the pinned 141,448-byte SHA-256 `62c2b1077eefaa9ada40a9fdc4b8e6a0bfd248084336be130310dab7f57c4438`, then verifies the packed native inventory and license disclosure. It does not read the legacy FBank staging binary. The complete source build also rebuilds and signs the recording Helper ad hoc. Product acceptance remains a separate release gate.
+The build requires Apple Silicon macOS, Node.js 24, Apple clang 17.0.0
+(`clang-1700.3.19.1`) and macOS SDK 26.0. When `DEVELOPER_DIR` is unset,
+the resolver selects matching Command Line Tools. It validates explicit
+selections and removes ambient compiler/SDK overrides for its child processes.
 
+Output is `native/fbank/build/Release/fbank.node`.
+The complete package build performs two isolated builds, strips debug symbols,
+and compares their bytes with the recorded asset identity: 141,448 bytes,
+SHA-256 `62c2b1077eefaa9ada40a9fdc4b8e6a0bfd248084336be130310dab7f57c4438`.
+
+Byte reproducibility is specific to this compiler, SDK, source and command.
+A changed toolchain requires numerical and artifact verification.
+See [development](../../docs/development.md) and
+[third-party notices](THIRD_PARTY_NOTICES.md).

@@ -1,37 +1,42 @@
 # Contributing
 
-Issues and pull requests are welcome after the repository is public. This is a
-free project maintained on a best-effort basis. There is no response-time,
-release-schedule or continued-maintenance commitment.
+## Issue reports
 
-## Report a problem
+Include the plugin version, DSH version, macOS version, architecture, model mode
+and steps to reproduce. Use synthetic audio and content-free diagnostics where
+possible. Do not attach meeting audio, transcripts, databases, credentials,
+signing material or other personal data.
 
-Include the plugin/package hash, DSH version, macOS version, architecture, model
-mode, reproduction steps and a minimal content-free diagnostic. Prefer synthetic
-audio. Do not post meeting audio/transcripts, databases, credentials, signing keys
-or personal data in public issues. Do not publish a suspected credential exposure
-or private meeting content; report its location without including the contents.
+For a suspected security vulnerability, use the repository's private vulnerability
+reporting form when available. If no private channel is available, request one
+without publishing vulnerability details or affected user data.
 
-## Prepare a change
+## Changes
 
-- Follow `AGENTS.md`, `CONTEXT.md` and the relevant product/spec boundaries.
-- Discuss changes to the frozen recording, ASR, diarization or meeting contracts
-  before implementing them. Keep fixes focused and reuse DSH public capabilities.
-- Use Node 24 and the pinned pnpm version. Install with
-  `pnpm install --frozen-lockfile`; run the smallest relevant tests, then
-  `pnpm run check` and `git diff --check`. Real native/model/recording changes
-  require the corresponding installed integration or probe evidence.
-- Describe the problem, behavior change, evidence and remaining limitations in
-  the pull request. Use concise conventional English commit subjects.
-- Keep generated binaries, Helper Apps, package archives, models and private
-  recordings out of Git. Preserve third-party license and attribution notices.
+Read [development](docs/development.md) and [the contributor instructions](AGENTS.md).
+Discuss scope or processing-contract changes before implementation.
+Keep patches focused and preserve existing data and license notices.
 
-## Licensing and release authority
+```sh
+pnpm install --frozen-lockfile
+pnpm run build
+pnpm run check
+git diff --check
+```
 
-Project-owned contributions are submitted under Apache-2.0 unless explicitly
-agreed otherwise. Third-party source retains its original terms and provenance;
-do not relabel it as project-owned Apache-2.0 code. This follows the submission
-terms in `LICENSE`, section 5; no separate CLA is required by this project.
+Run the smallest relevant tests during development. Changes involving native code,
+models, capture or host integration also require the applicable opt-in tests.
+Use isolated test data directories and dynamic ports. Documentation changes need
+link and consistency checks.
 
-Registry publication and repository visibility remain maintainer decisions.
-Passing tests or merging a change does not by itself authorize a release.
+A pull request should describe the problem, resulting behavior, verification
+environment and remaining limitations. Keep discussion respectful and technical.
+
+## Licensing
+
+Project-owned contributions are submitted under Apache-2.0, subject to section 5
+of [LICENSE](LICENSE), unless explicitly agreed otherwise. No separate CLA is
+required. Third-party material retains its original terms and provenance.
+
+The project does not guarantee response times or a release schedule.
+Merging a change does not authorize registry publication.

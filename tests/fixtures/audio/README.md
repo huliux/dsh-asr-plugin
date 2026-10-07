@@ -1,13 +1,21 @@
-# 合成音频回归样本
+# Synthetic audio fixture
 
-`alternating-stereo.mp3` 是两秒钟的确定性合成音频：前一秒只有左声道 440 Hz，后一秒只有右声道 660 Hz，不包含会议或个人数据。
+`alternating-stereo.mp3` contains two seconds of deterministic synthetic audio.
+The first second uses the left channel at 440 Hz; the second uses the right
+channel at 660 Hz. It contains no speech or personal data.
 
-当前 fixture 由 FFmpeg 8.0 + `libmp3lame` 生成，SHA-256 为 `399f859d65955d838b4d94a29324f319ad78e7d0b726bf4156ca16ccbbbad708`。构建脚本只在输出命中该 hash 时原子替换 fixture；其它 FFmpeg/encoder 版本只能作为语义参考，不会静默改写冻结样本。
-
-在安装 FFmpeg（含 `libmp3lame`）后重建：
+The fixture was generated with FFmpeg 8.0 and `libmp3lame`.
+Its SHA-256 is
+`399f859d65955d838b4d94a29324f319ad78e7d0b726bf4156ca16ccbbbad708`.
 
 ```sh
 node tests/fixtures/audio/build.mjs
 ```
 
-可通过 `FFMPEG=/absolute/path/to/ffmpeg` 显式指定构建工具。该样本只用于验证导入时的 stereo-to-mono 内容保真，不进入产品资产 manifest。
+Set `FFMPEG=/absolute/path/to/ffmpeg` to select an executable.
+The builder replaces the fixture atomically only when the output matches the
+recorded hash. Other encoder versions can be used for semantic comparison but
+do not replace the fixture.
+
+The test checks channel content preservation during stereo-to-mono import.
+The fixture is not a product asset.

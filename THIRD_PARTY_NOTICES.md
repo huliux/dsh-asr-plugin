@@ -79,4 +79,4 @@ The project itself is licensed under Apache-2.0; the full text is in `LICENSE`.
 - Fixed source: [repository](https://github.com/kunji163/clerki) at `44887f62f7b1a69fcc9d23583aa8df8f11898aca`, `audio-native/`.
 - License: BSD-2-Clause; full text in `third_party/licenses/BSD-2-Clause-Bitbook.txt`.
 - Attribution: Bitbook capture sources, Copyright (c) 2024 Max Bain; project changes cover chunk finalization, format conversion and product naming.
-- The Helper wrapper is project-owned Apache-2.0 code. Apple frameworks are linked from macOS, not redistributed. AudioTee is a design reference; no AudioTee source or binary is included.
+- The Helper wrapper is project-owned Apache-2.0 code. Apple frameworks are linked from macOS, not redistributed.

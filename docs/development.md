@@ -1,58 +1,108 @@
-# Development contracts
+# Development reference
 
-## Module ownership
+## Build environment
 
-`src/index.ts` adapts DSH to MeetingApplication. Repository owns persistent
-meeting/version/audio facts. RecordingSession owns a live recording lifecycle,
-track state and provisional draft. DSH owns sessions/workspaces, Jobs, Subprocess,
-Tools/Approval, configuration persistence, UI primitives and localization.
+Use Node.js 24 and pnpm 10.33.2, as declared in `package.json`.
+Install dependencies from `pnpm-lock.yaml`.
+The native build pins `node-gyp` 12.4.0; dependency install-script permissions
+are declared in `pnpm-workspace.yaml`.
 
-ASR/diarization and ONNX/native execution live in Workers. Batch Workers read
-managed audio/assets and return results; recording Workers may write only their
-bounded session work root. Workers do not access network, SQLite or delete original
-tracks. The native Helper owns capture, TCC, chunk delivery and watchdog behavior.
+```sh
+pnpm install --frozen-lockfile
+pnpm run build
+pnpm run check
+pnpm run build:closed-pilot
+```
 
-## Invariants
+`build` generates TypeScript and client outputs.
+`build:closed-pilot` additionally compiles native add-ons, builds and ad-hoc signs
+the recording Helper, and verifies package contents. It requires no Developer ID
+credentials or model weights. The script name is retained for compatibility.
+The TypeScript build alone does not produce a complete recording package.
+Run `build` before the first `check` in a new checkout to generate asset manifests.
+`check` ends with an ordinary build that clears complete package outputs;
+run `build:closed-pilot` afterward when preparing a recording package.
 
-Meeting references are explicit IDs in individual messages, not persistent
-session bindings. Agent projections retain a fixed transcript version and cursor
-contract. Exports derive deterministically from committed text under host approval.
-Draft revisions may change and are separate from committed transcript versions.
-Model/mode identity is immutable for each attempt; configuration changes affect
-future attempts only. Base mode retains recognized words/timestamps without
-invented punctuation; optional punctuation requires valid assets and explicit enablement.
+The FBank and hcluster hash checks require Apple clang 17.0.0
+(`clang-1700.3.19.1`) and macOS SDK 26.0. Their resolver selects matching Command
+Line Tools when `DEVELOPER_DIR` is unset and validates an explicit selection.
+Helper builds use their own selected Apple toolchain. Record the actual compiler,
+SDK and build environment when comparing Helper bytes.
+A different compiler or SDK requires qualification; changing expected hashes
+alone does not establish equivalence.
 
-## Verification and release
+## Module contracts
 
-Use package.json scripts and the lockfile as toolchain authority. Run the smallest
-relevant tests and pnpm run check. The synthetic fixtures are safe to commit;
-actual models/audio/databases remain ignored. Integration gates opt in to real
-native/model/host resources and must name an installed artifact where required.
-Use isolated DSH_HOME and dynamic ports; clean only your own resources.
+DSH owns lifecycle, configuration, UI and localization, sessions and workspaces,
+Tools/Approval, Jobs and Subprocess. The plugin owns managed audio, meeting
+persistence, model delivery, recording protocols and ASR/speaker processing.
 
-Native output hashes are qualified under a specific compiler/SDK. New compiler
-bytes or algorithm changes require qualification rather than updating constants
-merely to bypass checks. Keep upstream sources, patch explanations and full
-license texts. Preserve the Helper bundle ID and signed-tree/executable checks;
-source/signature success is distinct from non-silent capture/permission evidence.
+`src/index.ts` adapts DSH to `MeetingApplication`. The Repository stores meeting,
+transcript-version and audio facts. A RecordingSession owns one live recording,
+its tracks and provisional draft. Domain definitions are in [CONTEXT.md](../CONTEXT.md).
 
-Before releasing, record the exact package/model hashes and inventory, perform
-secret/private-content scanning and validate the real installation/client/model/
-recording/permission paths. Publishing source and npm are separate actions; model weights download from pinned
-upstream sources and stay out of GitHub Releases.
-Do not publish a candidate solely because engineering tests pass.
+ONNX and native inference run in Workers. Batch Workers read managed audio and
+verified assets and return results. Recording Workers may write only within their
+session work root. Workers do not use network or SQLite.
+Product child processes use DSH Subprocess. The signed Helper owns capture,
+macOS permission interaction, chunks and watchdogs.
 
-The optional Developer ID strategy uses neutral example publisher constants in
-this source snapshot. A publisher choosing that route must configure the trusted
-identity/team consistently in the build and verifier and qualify its artifact.
-The default public ad-hoc build requires no such identity or credentials.
+Meeting references contain explicit IDs in individual messages. Transcript
+projections read a fixed version with stable cursors. Exports are deterministic
+derivatives of committed text and require host approval for file writes.
+Draft revisions are replaceable and separate from committed transcript versions.
 
-Real adapter tests opt in with DSH_RUN_NATIVE_ADAPTERS=1 and
-DSH_RUN_VAD_MODEL=1 after verified assets are available in data/assets.
-Ordinary check runs without local model weights or native build outputs.
+## Model and recording lifecycle
 
-## Publishing
+Processing identity is captured for each attempt. Base mode preserves recognized
+words and timestamps. Verified installed punctuation applies to new attempts;
+damaged installed punctuation blocks preparation until repaired.
+See [model assets](model-assets.md).
 
-Use the [reviewed candidate publishing guide](publishing.md). Source export, package
-qualification and account authentication are separate checks; a pack/dry-run does
-not authorize publication.
+Recorder expansion can prepare models without creating a meeting, job or capture
+session. Each start verifies runtime assets and performs fresh silent permission
+admission before meeting or job creation. Permission results are not cached.
+System-audio verification failure can reflect permission or output routing.
+
+The recording model process can retain verified resources across sequential
+meetings with the same engine, mode and installation roots. Audio readers, drafts,
+VAD state, speaker clusters and result caches are fresh for every meeting.
+Five idle minutes release resources; import or retranscription releases idle
+recording resources. Failure or cancellation disposes the process.
+
+Recording protocol v1 runs within model-process protocol v1. A matching
+`session_end` settles inference, forwarding and cleanup before logical EOF and
+outcome are exposed. Logical completion does not establish physical exit.
+Host shutdown awaits process-tree exit before releasing the data-root lease.
+Batch RUN v2 retains its physical-exit contract.
+
+## Verification
+
+`pnpm run check` runs type checking, ordinary tests and the TypeScript/client build.
+Opt-in tests require the resources named by their environment gates.
+Ordinary checks do not measure speech accuracy, recording permission behavior
+or a complete supported OS matrix.
+
+| Command | Additional resources |
+| --- | --- |
+| `pnpm run probe:native:fbank` | Qualified Apple toolchain |
+| `pnpm run probe:native:recording-helper` | Apple toolchain |
+| `pnpm run test:workers:real` | Verified models and applicable audio fixtures |
+| `pnpm run probe:p1a-06` | Complete package |
+| `pnpm run probe:p1c` | Isolated installed DSH artifact |
+
+The FBank probe builds the complete package before comparing the packaged add-on
+with an independent source rebuild. It needs no pre-existing `data/assets` tree.
+
+Use synthetic fixtures, isolated `DSH_HOME` directories and dynamic ports.
+Existing user profiles require task-specific authorization. Clean only owned
+test resources. Keep recordings, transcripts, models, databases and generated
+artifacts outside Git.
+
+Changes to frozen processing algorithms or constants increment
+`src/assets/manifest.json` `algorithmRevision`. Asset changes update sizes and
+hashes. Retain vendored licenses, provenance and local modification notices.
+The default Helper uses ad-hoc signing. A Developer ID build must configure and
+verify its own identity and qualify the resulting permissions and update behavior.
+
+Release preparation is specified in [publishing](publishing.md).
