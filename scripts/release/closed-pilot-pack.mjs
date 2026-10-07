@@ -28,12 +28,13 @@ const ALLOWED_ROOT_FILES = new Set([
   "README.md",
   "README.zh-CN.md",
   "CONTRIBUTING.md",
+  "CONTEXT.md",
   "THIRD_PARTY_NOTICES.md",
   "cordis.patch.yml",
   "package.json",
 ]);
 const PUBLIC_GUIDES = new Set([
-  "docs/model-assets.md", "docs/development.md", "docs/publishing.md",
+  "docs/model-assets.md", "docs/development.md", "docs/publishing.md", "docs/distribution.md",
 ]);
 const FORBIDDEN_SEGMENTS = new Set([
   "build",

@@ -2,7 +2,10 @@
 
 [English](README.md) | 简体中文
 
-面向 Apple Silicon macOS 的 DeepSeek Harness（DSH）本地会议转写插件。
+[![npm](https://img.shields.io/npm/v/@huliux/dsh-asr-plugin)](https://www.npmjs.com/package/@huliux/dsh-asr-plugin)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
+面向 Apple Silicon macOS 的 DeepSeek Harness（DSH）非官方本地会议转写插件。
 支持导入 WAV、M4A、MP3 文件，录制麦克风与系统音频，生成包含时间戳和
 说话人标签的转写文本。会议可在 DSH 消息中显式引用，用于阅读与导出。
 
@@ -33,6 +36,11 @@ dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.1
 
 桌面与 Web 配置共用默认会议库。每个数据目录同时运行一个插件宿主；
 更换安装包时保留会议与模型数据。
+
+安装包校验、本地归档安装与版本渠道见 [分发说明](docs/distribution.md)。
+源码下载后需要完成 [源码构建](docs/development.md) 才能录音。
+安装问题请通过 [GitHub Issues](https://github.com/huliux/dsh-asr-plugin/issues)
+反馈，并附插件、DSH、Node.js 和 macOS 版本；请勿附会议数据或凭据。
 
 ## 模型准备
 

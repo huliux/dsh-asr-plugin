@@ -2,7 +2,10 @@
 
 English | [简体中文](README.zh-CN.md)
 
-Local meeting transcription for DeepSeek Harness (DSH) on Apple Silicon macOS.
+[![npm](https://img.shields.io/npm/v/@huliux/dsh-asr-plugin)](https://www.npmjs.com/package/@huliux/dsh-asr-plugin)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
+Unofficial local meeting transcription plugin for DeepSeek Harness (DSH) on Apple Silicon macOS.
 The plugin imports WAV, M4A and MP3 files, records microphone and system audio,
 and produces transcripts with timestamps and speaker labels. Meetings can be
 referenced explicitly in DSH messages for reading and export.
@@ -36,6 +39,12 @@ at installation and after updates. Keep system security protections enabled.
 
 Desktop and Web profiles share the default meeting store. Run one plugin host
 per data directory. Preserve meeting and model data when replacing a package.
+
+For package verification, local archive installation and release channels, see
+[distribution](docs/distribution.md). Source downloads require the complete
+[source build](docs/development.md) before recording. Report installation problems
+through [GitHub Issues](https://github.com/huliux/dsh-asr-plugin/issues), including
+the plugin, DSH, Node.js and macOS versions without meeting data or credentials.
 
 ## Model preparation
 

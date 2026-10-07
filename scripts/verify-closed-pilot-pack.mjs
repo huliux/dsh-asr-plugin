@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,8 +17,11 @@ import { inspectRecordingHelperSignature } from "../dist/assets/recording-helper
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 try {
-  if (process.argv.length !== 2) throw new Error("this command does not accept input paths");
-  const report = await inspectReleaseArchive(repositoryRoot);
+  const args = process.argv.slice(2);
+  if (args.length !== 0 && (args.length !== 2 || args[0] !== "--archive")) {
+    throw new Error("usage: verify-closed-pilot-pack.mjs [--archive /path/to/package.tgz]");
+  }
+  const report = await inspectReleaseArchive(repositoryRoot, args[1]);
   process.stdout.write(`${JSON.stringify(report)}\n`);
 } catch (error) {
   const failure = error instanceof ClosedPilotNativeReleaseError
@@ -28,15 +31,21 @@ try {
   process.exitCode = 1;
 }
 
-async function inspectReleaseArchive(cwd) {
+async function inspectReleaseArchive(cwd, archive) {
   const temporaryRoot = await mkdtemp(join(tmpdir(), "dsh-asr-pack-"));
   try {
-    const pack = await inspectPnpmPack(cwd, temporaryRoot);
+    const pack = archive === undefined
+      ? await inspectPnpmPack(cwd, temporaryRoot)
+      : await inspectExistingArchive(archive, temporaryRoot);
     const inventory = await verifyClosedPilotPackInventory({
       repositoryRoot: cwd,
       packedPaths: pack.files.map((file) => file.path),
     });
     const packageRoot = await extractPackage(pack, temporaryRoot);
+    await verifyClosedPilotPackInventory({
+      repositoryRoot: packageRoot,
+      packedPaths: pack.files.map((file) => file.path),
+    });
     const disclosure = await verifyPackedFbankDisclosure({ packageRoot });
     const helper = await verifyPackedHelper(packageRoot);
     const modes = await verifyPackedExecutableModes({
@@ -47,6 +56,23 @@ async function inspectReleaseArchive(cwd) {
   } finally {
     await rm(temporaryRoot, { force: true, recursive: true });
   }
+}
+
+async function inspectExistingArchive(archive, temporaryRoot) {
+  const filename = join(temporaryRoot, basename(archive));
+  await copyFile(resolve(archive), filename);
+  const listing = await runBounded("/usr/bin/tar", ["-tzf", filename], temporaryRoot, true);
+  const members = listing.trim().split("\n");
+  if (members.some((path) => !path.startsWith("package/") || path.includes("\\")
+    || path.split("/").some((part) => part === "." || part === ".."))) {
+    throw new Error("archive members must be safe paths under package/");
+  }
+  const details = await runBounded("/usr/bin/tar", ["-tvzf", filename], temporaryRoot, true);
+  if (details.trim().split("\n").some((line) => !/^[d-]/.test(line))) {
+    throw new Error("archive may contain only directories and regular files");
+  }
+  const files = members.filter((path) => !path.endsWith("/"));
+  return { filename, files: files.map((path) => ({ path: path.slice("package/".length) })) };
 }
 
 async function verifyPackedHelper(packageRoot) {

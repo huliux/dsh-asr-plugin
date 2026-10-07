@@ -1,6 +1,14 @@
 {
   "name": "@huliux/dsh-asr-plugin",
   "description": "Local recording and meeting transcription for DSH on macOS (Apple Silicon only)",
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "asr",
+    "meeting-transcription",
+    "local-transcription"
+  ],
+  "homepage": "https://github.com/huliux/dsh-asr-plugin#readme",
   "version": "0.1.1",
   "private": true,
   "license": "Apache-2.0",
@@ -44,8 +52,10 @@
     "third_party",
     "README.zh-CN.md",
     "CONTRIBUTING.md",
+    "CONTEXT.md",
     "docs/model-assets.md",
     "docs/development.md",
+    "docs/distribution.md",
     "docs/publishing.md"
   ],
   "dsh": {
@@ -81,6 +91,7 @@
   "scripts": {
     "build": "node scripts/clean-build.mjs && tsc -p tsconfig.build.json && tsc -p tsconfig.client.build.json && tsdown --config tsdown.config.ts && node scripts/copy-build-assets.mjs",
     "build:closed-pilot": "pnpm run build && node scripts/materialize-closed-pilot-natives.mjs && node scripts/build-recording-helper.mjs --public-release && node scripts/verify-closed-pilot-pack.mjs",
+    "pack:release": "node scripts/pack-public-release.mjs",
     "build:model-pack": "pnpm run build && node scripts/build-model-pack.mjs",
     "build:native:fbank": "node scripts/build-fbank.mjs",
     "build:native:hcluster": "node scripts/build-hcluster.mjs",
