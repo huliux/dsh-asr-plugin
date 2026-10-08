@@ -9,9 +9,22 @@ segments and two speaker labels. A separate DSH conversation selected the meetin
 with `@`, read the complete transcript and used a configured DeepSeek model to
 summarize decisions, action items and open questions. No real meeting data is shown.
 
-This demonstrates the import and meeting-reference workflow. It is not an accuracy
-benchmark or a new live-recording permission test. Audio inference runs locally;
+The summary screenshots demonstrate audio import and meeting references. The
+additional recording screenshots show an actual recording session capturing the
+same fictional audio played through the Mac system output. At capture time, the
+microphone is off and system audio is active; the expanded recorder displays
+provisional text and elapsed time. The prompt in the composer is an unsent request.
+These examples are not an accuracy benchmark or a complete recording-permission
+test matrix. Audio inference runs locally;
 the referenced transcript is sent to the LLM provider configured in DSH for summary.
+
+## Active recording / 正在录音
+
+![Compact recorder during actual system-audio capture](recording-active.jpg)
+
+## Expanded recorder / 录音组件展开
+
+![Expanded recorder with elapsed time, track states and live draft transcript](recording-expanded.jpg)
 
 ## Meeting summary / 会议总结
 
