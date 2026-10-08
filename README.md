@@ -100,3 +100,13 @@ Project-owned source is licensed under [Apache-2.0](LICENSE). Third-party source
 and models retain their respective terms; see
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and the notices in `third_party/`
 and vendored native directories.
+
+## Support and contact
+
+- Usage questions, bug reports and feature requests:
+  [GitHub Issues](https://github.com/huliux/dsh-asr-plugin/issues).
+  See [support guidelines](SUPPORT.md) for useful diagnostic information.
+- Collaboration and private inquiries:
+  [dasenrising@gmail.com](mailto:dasenrising@gmail.com).
+- Security vulnerabilities: follow [the security policy](SECURITY.md) to report
+  privately.

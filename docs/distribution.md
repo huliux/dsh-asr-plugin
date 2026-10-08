@@ -54,6 +54,8 @@ maintainer's release page. The archive excludes models and user data.
 - [Issues](https://github.com/huliux/dsh-asr-plugin/issues) are the support route.
   Include versions and content-free diagnostics; keep audio, transcripts, local
   databases and credentials private.
+- [Support and contact](../SUPPORT.md) distinguishes public support from private
+  inquiries; [the security policy](../SECURITY.md) provides private reporting routes.
 - The [`dsh-plugin` topic](https://github.com/topics/dsh-plugin) helps discovery.
   Community catalogs review submissions independently. A topic or listing does
   not establish DeepSeek endorsement or additional platform compatibility.

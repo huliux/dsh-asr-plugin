@@ -7,9 +7,8 @@ and steps to reproduce. Use synthetic audio and content-free diagnostics where
 possible. Do not attach meeting audio, transcripts, databases, credentials,
 signing material or other personal data.
 
-For a suspected security vulnerability, use the repository's private vulnerability
-reporting form when available. If no private channel is available, request one
-without publishing vulnerability details or affected user data.
+For a suspected security vulnerability, follow [SECURITY.md](SECURITY.md) to
+report privately. Other support and contact channels are in [SUPPORT.md](SUPPORT.md).
 
 ## Changes
 

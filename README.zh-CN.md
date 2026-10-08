@@ -86,3 +86,12 @@ DSH 配置的服务提供方；该操作受宿主配置和提供方条款约束�
 项目自有源码使用 [Apache-2.0](LICENSE)。第三方源码与模型保留各自条款；
 许可和署名见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)、
 `third_party/` 与原生模块的 vendored 目录。
+
+## 支持与联系
+
+- 使用问题、Bug 和功能建议：
+  [GitHub Issues](https://github.com/huliux/dsh-asr-plugin/issues)。
+  需要提供的诊断信息见 [支持说明](SUPPORT.md)。
+- 合作与私下联系：
+  [dasenrising@gmail.com](mailto:dasenrising@gmail.com)。
+- 安全漏洞：请按 [安全报告说明](SECURITY.md) 私下反馈。

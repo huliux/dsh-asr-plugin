@@ -9,6 +9,11 @@
     "local-transcription"
   ],
   "homepage": "https://github.com/huliux/dsh-asr-plugin#readme",
+  "author": {
+    "name": "huliux",
+    "url": "https://github.com/huliux",
+    "email": "dasenrising@gmail.com"
+  },
   "version": "0.1.2",
   "private": true,
   "license": "Apache-2.0",
@@ -52,6 +57,8 @@
     "third_party",
     "README.zh-CN.md",
     "CONTRIBUTING.md",
+    "SUPPORT.md",
+    "SECURITY.md",
     "CONTEXT.md",
     "docs/model-assets.md",
     "docs/development.md",
