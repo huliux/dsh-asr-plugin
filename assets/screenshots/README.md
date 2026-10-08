@@ -13,7 +13,15 @@ The summary screenshots demonstrate audio import and meeting references. The
 additional recording screenshots show an actual recording session capturing the
 same fictional audio played through the Mac system output. At capture time, the
 microphone is off and system audio is active; the expanded recorder displays
-provisional text and elapsed time. The prompt in the composer is an unsent request.
+provisional text and elapsed time. In `recording-active.jpg` and
+`recording-expanded.jpg`, the prompt in the composer is an unsent request.
+
+The live-summary screenshot shows a later, separate recording session. A meeting
+was selected with `@` while capture continued; the configured DeepSeek model
+actually called `meeting_live_get` and generated an interim summary from draft
+revision 34. This is a user-requested snapshot, not an automatically refreshing
+summary. The recorder remains active in the image, and the response labels its
+content as provisional and subject to change.
 These examples are not an accuracy benchmark or a complete recording-permission
 test matrix. Audio inference runs locally;
 the referenced transcript is sent to the LLM provider configured in DSH for summary.
@@ -25,6 +33,10 @@ the referenced transcript is sent to the LLM provider configured in DSH for summ
 ## Expanded recorder / 录音组件展开
 
 ![Expanded recorder with elapsed time, track states and live draft transcript](recording-expanded.jpg)
+
+## Summarize during recording / 边录边总结
+
+![An interim summary from the live draft while system-audio recording continues](recording-live-summary.jpg)
 
 ## Meeting summary / 会议总结
 

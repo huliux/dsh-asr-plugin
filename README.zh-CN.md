@@ -12,8 +12,8 @@
 ![引用演示会议后提炼决策与行动项](assets/screenshots/meeting-summary.jpg)
 
 示例使用语音合成的虚构会议，由已发布插件实际转写，再通过 `@` 引用会议，
-交给配置的 DeepSeek 模型总结。正在录音、展开后的录音草稿、行动项、
-会议选择器与模型准备界面见
+交给配置的 DeepSeek 模型总结。正在录音、边录边总结、展开后的录音草稿、
+行动项、会议选择器与模型准备界面见
 [案例截图](assets/screenshots/README.md)。
 [官方社区展示帖](https://github.com/deepseek-ai/deepseek-harness/discussions/9125)。
 
