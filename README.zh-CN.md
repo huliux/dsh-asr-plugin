@@ -9,11 +9,11 @@
 支持导入 WAV、M4A、MP3 文件，录制麦克风与系统音频，生成包含时间戳和
 说话人标签的转写文本。会议可在 DSH 消息中显式引用，用于阅读与导出。
 
-![引用演示会议后提炼决策与行动项](assets/screenshots/meeting-summary.jpg)
+![录音继续进行时引用当前会议生成阶段性总结](assets/screenshots/recording-live-summary.jpg)
 
-示例使用语音合成的虚构会议，由已发布插件实际转写，再通过 `@` 引用会议，
-交给配置的 DeepSeek 模型总结。正在录音、边录边总结、展开后的录音草稿、
-行动项、会议选择器与模型准备界面见
+示例使用语音合成的虚构会议。在录音继续进行时，通过 `@` 引用当前会议，
+让配置的 DeepSeek 模型读取实时草稿并生成阶段性总结。总结是用户主动请求的
+当前快照，后续可能随草稿变化。完整案例与环境信息见
 [案例截图](assets/screenshots/README.md)。
 [官方社区展示帖](https://github.com/deepseek-ai/deepseek-harness/discussions/9125)。
 
@@ -73,6 +73,18 @@ dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.2
 选择 DSH 会话后录音，或要求 DSH Agent 导入本机音频的绝对路径。
 通过 `@` 选择会议并请求阅读或导出；文件写入使用 DSH 审批。
 会议独立于 DSH 会话和工作区保存。
+
+紧凑录音条显示正在采集时的控制项：
+
+![正在录音的紧凑组件](assets/screenshots/recording-active.jpg)
+
+展开后可以查看录音计时、音轨状态和实时转写草稿：
+
+![展开录音组件查看实时草稿](assets/screenshots/recording-expanded.jpg)
+
+导入音频或录音结束后，可引用会议的正式转写，提炼决策与行动项：
+
+![引用演示会议后提炼决策与行动项](assets/screenshots/meeting-summary.jpg)
 
 模型准备后，音频推理在本机运行。使用大模型阅读转写时，内容可能发送给
 DSH 配置的服务提供方；该操作受宿主配置和提供方条款约束。

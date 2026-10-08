@@ -10,13 +10,13 @@ The plugin imports WAV, M4A and MP3 files, records microphone and system audio,
 and produces transcripts with timestamps and speaker labels. Meetings can be
 referenced explicitly in DSH messages for reading and export.
 
-![A referenced demo meeting summarized into decisions and action items](assets/screenshots/meeting-summary.jpg)
+![An interim meeting summary while recording continues](assets/screenshots/recording-live-summary.jpg)
 
-This example uses a fictional, speech-synthesized meeting, transcribed by the
-published plugin and summarized by a configured DeepSeek model after an `@`
-reference. See the [workflow screenshots](assets/screenshots/README.md) for action
-items, active recording, an interim summary during recording, the expanded
-recorder, the meeting picker and model preparation.
+This example uses a fictional, speech-synthesized meeting. While recording
+continues, an `@` reference lets the configured DeepSeek model read the live draft
+and generate an interim summary. The summary is a user-requested snapshot and can
+change as the draft evolves. See the [workflow screenshots](assets/screenshots/README.md)
+for the full example and environment details.
 [Official community showcase](https://github.com/deepseek-ai/deepseek-harness/discussions/9125).
 
 ## Compatibility
@@ -84,6 +84,19 @@ Select a DSH session to record, or ask the DSH agent to import an absolute local
 audio path. Use the `@` picker to reference a meeting and request reading or export.
 File writes use DSH Approval. Meetings persist independently of DSH sessions and
 workspaces.
+
+The compact recorder shows the active capture controls:
+
+![Compact recorder during system-audio recording](assets/screenshots/recording-active.jpg)
+
+Expand it to view elapsed time, track states and the live transcript draft:
+
+![Expanded recorder with recording status and live draft](assets/screenshots/recording-expanded.jpg)
+
+For imported audio or after recording, reference a meeting to summarize its
+committed transcript:
+
+![A referenced demo meeting summarized into decisions and action items](assets/screenshots/meeting-summary.jpg)
 
 Audio inference runs locally after model preparation. Reading a transcript with
 an LLM can send its content to the provider configured in DSH; host configuration
