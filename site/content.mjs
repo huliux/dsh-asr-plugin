@@ -5,6 +5,7 @@ const command = (copy) => `<div class="command"><pre><code>dsh plugin --profile 
 const source = (path, text) => `<a href="${repo}/blob/main/${path}">${text}</a>`;
 
 export const screenshots = ['recording-live-summary', 'recording-active', 'recording-expanded', 'meeting-summary'];
+export const googleSiteVerification = 'F9EH-zLKll2Sk5245wPagM6_Vq9IZ89r4rU7uZq40Xs';
 
 export const locales = {
   'zh-CN': {

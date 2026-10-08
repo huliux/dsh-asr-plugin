@@ -50,6 +50,9 @@ published npm version; carry it into the next qualified release.
 
 The sitemap is <https://huliux.github.io/dsh-asr-plugin/sitemap.xml>.
 For Google Search Console, verify this URL-prefix property with its supplied HTML
-meta tag or verification file and submit the sitemap. Verification needs the
+meta tag or verification file and submit the sitemap. The public verification
+tag is stored in `content.mjs` and emitted in the root homepage's `<head>`.
+Keep it after verification because Google periodically checks ownership.
+Verification needs the
 maintainer's Search Console account; deployment alone does not perform it or
 guarantee indexing. The site includes no analytics or tracking scripts.

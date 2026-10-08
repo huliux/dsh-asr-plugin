@@ -1,7 +1,7 @@
 import { copyFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { locales, screenshots } from '../site/content.mjs';
+import { googleSiteVerification, locales, screenshots } from '../site/content.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const outputArg = process.argv[2];
@@ -39,6 +39,7 @@ for (const [language, locale] of Object.entries(locales)) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escape(page.title)} · dsh-asr-plugin</title>
 <meta name="description" content="${escape(page.description)}">
+${key === 'index' && locale.prefix === '' ? `<meta name="google-site-verification" content="${escape(googleSiteVerification)}" />` : ''}
 <link rel="canonical" href="${url}">
 <link rel="alternate" hreflang="zh-CN" href="${base}${locales['zh-CN'].prefix}${route(key)}">
 <link rel="alternate" hreflang="en" href="${base}${locales.en.prefix}${route(key)}">
