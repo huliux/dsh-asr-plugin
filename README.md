@@ -10,6 +10,13 @@ The plugin imports WAV, M4A and MP3 files, records microphone and system audio,
 and produces transcripts with timestamps and speaker labels. Meetings can be
 referenced explicitly in DSH messages for reading and export.
 
+![A referenced demo meeting summarized into decisions and action items](assets/screenshots/meeting-summary.jpg)
+
+This example uses a fictional, speech-synthesized meeting, transcribed by the
+published plugin and summarized by a configured DeepSeek model after an `@`
+reference. See the [workflow screenshots](assets/screenshots/README.md) for action
+items, the meeting picker and model preparation.
+
 ## Compatibility
 
 | Component | Requirement |

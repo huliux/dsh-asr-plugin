@@ -59,6 +59,9 @@ maintainer's release page. The archive excludes models and user data.
 - The [`dsh-plugin` topic](https://github.com/topics/dsh-plugin) helps discovery.
   Community catalogs review submissions independently. A topic or listing does
   not establish DeepSeek endorsement or additional platform compatibility.
+- [Workflow screenshots](../assets/screenshots/README.md) use fictional meeting
+  audio. The root `screenshots.json` declares the images and their display order
+  for compatible community catalogs and plugin markets.
 
 ## Maintainer delivery
 

@@ -59,6 +59,8 @@
     "CONTRIBUTING.md",
     "SUPPORT.md",
     "SECURITY.md",
+    "screenshots.json",
+    "assets/screenshots",
     "CONTEXT.md",
     "docs/model-assets.md",
     "docs/development.md",
