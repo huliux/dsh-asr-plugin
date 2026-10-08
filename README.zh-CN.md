@@ -14,6 +14,7 @@
 示例使用语音合成的虚构会议，由已发布插件实际转写，再通过 `@` 引用会议，
 交给配置的 DeepSeek 模型总结。行动项、会议选择器与模型准备界面见
 [案例截图](assets/screenshots/README.md)。
+[官方社区展示帖](https://github.com/deepseek-ai/deepseek-harness/discussions/9125)。
 
 ## 兼容性
 

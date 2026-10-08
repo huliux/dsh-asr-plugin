@@ -16,6 +16,7 @@ This example uses a fictional, speech-synthesized meeting, transcribed by the
 published plugin and summarized by a configured DeepSeek model after an `@`
 reference. See the [workflow screenshots](assets/screenshots/README.md) for action
 items, the meeting picker and model preparation.
+[Official community showcase](https://github.com/deepseek-ai/deepseek-harness/discussions/9125).
 
 ## Compatibility
 

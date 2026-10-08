@@ -63,6 +63,9 @@ maintainer's release page. The archive excludes models and user data.
   audio. The root `screenshots.json` declares the images and their display order
   for compatible community catalogs and plugin markets.
 
+- [Official community showcase](https://github.com/deepseek-ai/deepseek-harness/discussions/9125) introduces this unofficial plugin with
+  the verified import and meeting-reference example.
+
 ## Maintainer delivery
 
 Follow [publishing](publishing.md) for exact-artifact qualification and approval.
