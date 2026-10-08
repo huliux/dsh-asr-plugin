@@ -8,7 +8,7 @@ export const screenshots = ['recording-live-summary', 'recording-active', 'recor
 
 export const locales = {
   'zh-CN': {
-    prefix: '', other: 'en/', otherLabel: 'English', skip: '跳至正文',
+    prefix: 'zh-CN/', other: '', otherLabel: 'English', skip: '跳至正文',
     tagline: 'DeepSeek Harness 非官方插件',
     nav: { index: '介绍', start: '快速开始', guide: '使用案例', faq: '常见问题' },
     footer: `由 <a href="https://github.com/huliux">huliux</a> 维护 · Apache-2.0<br><a href="${repo}/issues">问题反馈</a> · <a href="mailto:dasenrising@gmail.com">联系作者</a> · ${source('SECURITY.md', '安全报告')}`,
@@ -95,7 +95,7 @@ ${image('meeting-summary', '引用已完成的会议后，聊天显示决定与�
     }
   },
   en: {
-    prefix: 'en/', other: '', otherLabel: '简体中文', skip: 'Skip to content',
+    prefix: '', other: 'zh-CN/', otherLabel: '简体中文', skip: 'Skip to content',
     tagline: 'Unofficial DeepSeek Harness plugin',
     nav: { index: 'About', start: 'Get started', guide: 'Workflows', faq: 'FAQ' },
     footer: `Maintained by <a href="https://github.com/huliux">huliux</a> · Apache-2.0<br><a href="${repo}/issues">Report an issue</a> · <a href="mailto:dasenrising@gmail.com">Contact</a> · ${source('SECURITY.md', 'Security reports')}`,

@@ -2,8 +2,8 @@
 
 English | [简体中文](README.zh-CN.md)
 
-[Project site](https://huliux.github.io/dsh-asr-plugin/en/) ·
-[Getting started](https://huliux.github.io/dsh-asr-plugin/en/start.html)
+[Project site](https://huliux.github.io/dsh-asr-plugin/) ·
+[Getting started](https://huliux.github.io/dsh-asr-plugin/start.html)
 
 [![npm](https://img.shields.io/npm/v/@huliux/dsh-asr-plugin)](https://www.npmjs.com/package/@huliux/dsh-asr-plugin)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)

@@ -13,6 +13,7 @@ await mkdir(dirname(output), { recursive: true });
 await mkdir(output); // Refuse to overwrite an existing site or unrelated files.
 await mkdir(resolve(output, 'assets'));
 await mkdir(resolve(output, 'en'));
+await mkdir(resolve(output, 'zh-CN'));
 
 const { version } = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
 const base = 'https://huliux.github.io/dsh-asr-plugin/';
@@ -39,8 +40,8 @@ for (const [language, locale] of Object.entries(locales)) {
 <title>${escape(page.title)} · dsh-asr-plugin</title>
 <meta name="description" content="${escape(page.description)}">
 <link rel="canonical" href="${url}">
-<link rel="alternate" hreflang="zh-CN" href="${base}${route(key)}">
-<link rel="alternate" hreflang="en" href="${base}en/${route(key)}">
+<link rel="alternate" hreflang="zh-CN" href="${base}${locales['zh-CN'].prefix}${route(key)}">
+<link rel="alternate" hreflang="en" href="${base}${locales.en.prefix}${route(key)}">
 <link rel="alternate" hreflang="x-default" href="${base}${route(key)}">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${escape(page.title)} · dsh-asr-plugin">
@@ -66,6 +67,19 @@ for (const [language, locale] of Object.entries(locales)) {
     generated.push({ path, html });
     siteUrls.push(url);
   }
+}
+
+// Keep the first published English URLs working after English moves to the root.
+for (const key of Object.keys(locales.en.pages)) {
+  const target = `../${route(key) || './'}`;
+  const path = `en/${key}.html`;
+  const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page moved · dsh-asr-plugin</title><link rel="canonical" href="${base}${route(key)}">
+<meta http-equiv="refresh" content="0; url=${target}"></head>
+<body><p><a href="${target}">Continue to the English page</a>.</p></body></html>\n`;
+  await writeFile(resolve(output, path), html);
+  generated.push({ path, html });
 }
 
 for (const name of ['style.css', 'copy.js']) await copyFile(resolve(root, 'site', name), resolve(output, name));

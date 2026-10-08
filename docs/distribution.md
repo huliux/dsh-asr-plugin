@@ -49,7 +49,7 @@ maintainer's release page. The archive excludes models and user data.
 
 ## Source, support and discovery
 
-- [Project site](https://huliux.github.io/dsh-asr-plugin/en/) provides installation,
+- [Project site](https://huliux.github.io/dsh-asr-plugin/) provides installation,
   recording examples and FAQs in English and Chinese. Source remains in this
   repository; [site maintenance](https://github.com/huliux/dsh-asr-plugin/blob/main/site/README.md)
   describes its separate build.

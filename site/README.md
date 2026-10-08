@@ -1,9 +1,10 @@
 # Project site maintenance
 
 The public project site is hosted with GitHub Pages at
-<https://huliux.github.io/dsh-asr-plugin/> (Chinese) and
-<https://huliux.github.io/dsh-asr-plugin/en/> (English).
+<https://huliux.github.io/dsh-asr-plugin/> (English, default) and
+<https://huliux.github.io/dsh-asr-plugin/zh-CN/> (Chinese).
 Each language has an introduction, installation guide, workflows and FAQ.
+The previously published `/en/` URLs redirect to the matching English root pages.
 
 The visual direction follows the narrow single-column typography and whitespace
 of [Emil Kowalski's skill page](https://emilkowal.ski/skill). No source, fonts or
@@ -39,8 +40,9 @@ Check feature, compatibility and privacy claims against the public README.
 `.github/workflows/pages.yml` builds selected site inputs on pushes to `main`
 and manual dispatch, then deploys through the `github-pages` environment.
 It does not upload the repository, model weights, package binaries or user data.
-Only the eight HTML pages, CSS/JavaScript, four selected screenshots, sitemap and
-`.nojekyll` are published. Actions are pinned to reviewed commit hashes.
+Only the eight content pages, four legacy English redirects, CSS/JavaScript,
+four selected screenshots, sitemap and `.nojekyll` are published.
+Actions are pinned to reviewed commit hashes.
 
 Pages is configured to use GitHub Actions. Repository About and package homepage
 point to the project site. Updating source metadata does not modify a previously
