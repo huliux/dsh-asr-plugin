@@ -8,7 +8,7 @@
     "meeting-transcription",
     "local-transcription"
   ],
-  "homepage": "https://github.com/huliux/dsh-asr-plugin#readme",
+  "homepage": "https://huliux.github.io/dsh-asr-plugin/",
   "author": {
     "name": "huliux",
     "url": "https://github.com/huliux",
@@ -98,6 +98,7 @@
     "arm64"
   ],
   "scripts": {
+    "build:site": "node scripts/build-site.mjs",
     "build": "node scripts/clean-build.mjs && tsc -p tsconfig.build.json && tsc -p tsconfig.client.build.json && tsdown --config tsdown.config.ts && node scripts/copy-build-assets.mjs",
     "build:closed-pilot": "pnpm run build && node scripts/materialize-closed-pilot-natives.mjs && node scripts/build-recording-helper.mjs --public-release && node scripts/verify-closed-pilot-pack.mjs",
     "pack:release": "node scripts/pack-public-release.mjs",
