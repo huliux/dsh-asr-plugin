@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
 if (args.length !== 4 || args[0] !== "--version" || args[2] !== "--output") {
-  throw new Error("usage: pnpm pack:release --version 0.1.2 --output /absolute/new-directory");
+  throw new Error("usage: pnpm pack:release --version 0.1.3 --output /absolute/new-directory");
 }
 const [version, destination] = [args[1], args[3]];
 if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) {
@@ -21,7 +21,7 @@ const manifest = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
 if (manifest.private !== true) throw new Error("development manifest must retain private: true");
 if (!manifest.keywords?.includes("dsh-plugin")
   || manifest.repository?.url !== "git+https://github.com/huliux/dsh-asr-plugin.git"
-  || manifest.homepage !== "https://github.com/huliux/dsh-asr-plugin#readme"
+  || manifest.homepage !== "https://huliux.github.io/dsh-asr-plugin/"
   || manifest.bugs?.url !== "https://github.com/huliux/dsh-asr-plugin/issues") {
   throw new Error("public discovery and support metadata is incomplete");
 }

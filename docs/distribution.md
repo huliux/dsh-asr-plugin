@@ -11,8 +11,13 @@ Use the DSH Plugins page, or install the documented stable version into your
 chosen Web profile:
 
 ```sh
-dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.2
+dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.3
 ```
+
+Plugin 0.1.3 supports DSH 0.2.0-rc.2 and 0.2.1-rc.2. To update the desktop
+profile, choose **Add plugin** in the app and enter
+`@huliux/dsh-asr-plugin@0.1.3`. Web users can rerun the command above.
+Restart if requested; the supported versions require no compatibility exemption.
 
 Published packages contain the compiled client, native add-ons and signed
 recording Helper. Model weights are downloaded separately through settings.
@@ -34,8 +39,8 @@ the same qualified `.tgz` uploaded to npm, with `SHA256SUMS` and release notes.
 Choose an attached package archive. GitHub's automatic source ZIP/tar downloads
 require the [complete build](development.md); they omit compiled recording assets.
 
-Download the [0.1.2 package](https://github.com/huliux/dsh-asr-plugin/releases/download/v0.1.2/huliux-dsh-asr-plugin-0.1.2.tgz)
-and [SHA256SUMS](https://github.com/huliux/dsh-asr-plugin/releases/download/v0.1.2/SHA256SUMS)
+Download the [0.1.3 package](https://github.com/huliux/dsh-asr-plugin/releases/download/v0.1.3/huliux-dsh-asr-plugin-0.1.3.tgz)
+and [SHA256SUMS](https://github.com/huliux/dsh-asr-plugin/releases/download/v0.1.3/SHA256SUMS)
 into one directory, verify them, and install the absolute
 local archive path into your selected profile:
 

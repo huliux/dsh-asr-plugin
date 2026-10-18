@@ -42,8 +42,13 @@ Install `@huliux/dsh-asr-plugin` from the DSH Plugins page. Web profiles also
 support the CLI:
 
 ```sh
-dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.2
+dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.3
 ```
+
+For DSH 0.2.1-rc.2, upgrade to plugin 0.1.3. In the desktop Plugins page,
+choose **Add plugin** and enter `@huliux/dsh-asr-plugin@0.1.3`; Web users can
+rerun the command above. Restart DSH if requested. Supported hosts load this
+version without a compatibility exemption.
 
 The package includes native add-ons and an ad-hoc signed recording Helper.
 The Helper is not notarized; macOS may require permission or security approval
