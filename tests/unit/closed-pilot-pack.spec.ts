@@ -27,6 +27,11 @@ describe("closed-pilot pack inventory gate", () => {
   it.each([
     "locale/en.json", "locale/zh.json", "CONTRIBUTING.md",
     "docs/model-assets.md", "docs/development.md", "docs/publishing.md",
+    "SUPPORT.md", "SECURITY.md", "screenshots.json", "assets/screenshots/README.md",
+    "assets/screenshots/meeting-summary.jpg", "assets/screenshots/recording-live-summary.jpg",
+    "assets/screenshots/recording-active.jpg", "assets/screenshots/recording-expanded.jpg",
+    "assets/screenshots/meeting-action-items.jpg", "assets/screenshots/meeting-reference.jpg",
+    "assets/screenshots/models-ready.jpg",
   ])("allows the curated public guide or metadata %s", async (path) => {
     await expect(verifyClosedPilotPackInventory({
       repositoryRoot: "/not-read-before-inventory-is-valid",
@@ -85,6 +90,8 @@ describe("closed-pilot pack inventory gate", () => {
     "docs/design/mvp-prd.md",
     "docs/research/private-review.md",
     "locale/private.json",
+    "assets/screenshots/private-meeting.jpg",
+    "assets/screenshots/meeting.wav",
   ])("rejects forbidden or private package member %s", async (forbiddenPath) => {
     await expect(verifyClosedPilotPackInventory({
       repositoryRoot: "/not-read-before-inventory-is-valid",

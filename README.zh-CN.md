@@ -24,7 +24,7 @@
 
 | 组件 | 要求 |
 | --- | --- |
-| 宿主 | DSH 0.2.0-rc.2 |
+| 宿主 | DSH 0.2.0-rc.2 或 0.2.1-rc.2 |
 | 运行时 | Node.js 24 |
 | 平台 | macOS、Apple Silicon（`darwin` / `arm64`） |
 | 麦克风 API | macOS 13.5 或更高版本 |

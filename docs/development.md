@@ -37,6 +37,13 @@ DSH owns lifecycle, configuration, UI and localization, sessions and workspaces,
 Tools/Approval, Jobs and Subprocess. The plugin owns managed audio, meeting
 persistence, model delivery, recording protocols and ASR/speaker processing.
 
+`engines.dsh` and DSH peer ranges declare the verified host versions explicitly.
+Development dependencies target DSH 0.2.1-rc.2; retain 0.2.0-rc.2 admission for
+existing installations. Host upgrades require compatibility admission, client
+and host integration checks before extending these ranges. Do not substitute
+profile version exemptions for qualification. `probe:p0-07:config` checks the
+installed CLI against the development host version.
+
 `src/index.ts` adapts DSH to `MeetingApplication`. The Repository stores meeting,
 transcript-version and audio facts. A RecordingSession owns one live recording,
 its tracks and provisional draft. Domain definitions are in [CONTEXT.md](../CONTEXT.md).

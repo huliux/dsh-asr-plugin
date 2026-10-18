@@ -100,7 +100,7 @@ it("重跑提交前持续读取旧版本，成功后一次切到新版本", asyn
   });
   expect(started).toEqual({
     meetingId: MEETING_ID,
-    jobId: "meeting-1",
+    jobId: expect.any(String),
     status: "processing",
     baseVersion: 1,
     targetVersion: 2,

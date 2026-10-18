@@ -1,9 +1,11 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const EXPECTED_DSH_VERSION = "0.1.1-rc.2";
+const EXPECTED_DSH_VERSION = JSON.parse(readFileSync(
+  new URL("../package.json", import.meta.url), "utf8",
+)).devDependencies["@deepseek-ai/dsh-agent"];
 const REQUIRED_ROWS = {
   jobs: "@deepseek-ai/dsh-jobs-local",
   subprocess: "@deepseek-ai/dsh-subprocess-local",

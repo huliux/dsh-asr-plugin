@@ -29,12 +29,23 @@ const ALLOWED_ROOT_FILES = new Set([
   "README.zh-CN.md",
   "CONTRIBUTING.md",
   "CONTEXT.md",
+  "SUPPORT.md",
+  "SECURITY.md",
+  "screenshots.json",
   "THIRD_PARTY_NOTICES.md",
   "cordis.patch.yml",
   "package.json",
 ]);
 const PUBLIC_GUIDES = new Set([
   "docs/model-assets.md", "docs/development.md", "docs/publishing.md", "docs/distribution.md",
+  "assets/screenshots/README.md",
+  "assets/screenshots/meeting-summary.jpg",
+  "assets/screenshots/recording-live-summary.jpg",
+  "assets/screenshots/recording-active.jpg",
+  "assets/screenshots/recording-expanded.jpg",
+  "assets/screenshots/meeting-action-items.jpg",
+  "assets/screenshots/meeting-reference.jpg",
+  "assets/screenshots/models-ready.jpg",
 ]);
 const FORBIDDEN_SEGMENTS = new Set([
   "build",

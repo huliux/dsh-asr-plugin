@@ -231,12 +231,15 @@ heavySuite("real Workers through assembled DSH subprocess", () => {
     const fingerprint = await fingerprintAssetManifest(manifestPath);
     const controller = new AbortController();
     const client = realClient("asr", fingerprint, spawner, 30_000);
+    const reader = await openPcm16Wav(audioPath);
+    const durationMs = reader.metadata.durationMs;
+    await reader.close();
     await expect(client.run({
       type: "run",
       request_id: "dsh-real-cancel",
       kind: "asr",
       base_transcript_version: 0,
-      payload: { audio_path: audioPath, duration_ms: 30_000 },
+      payload: { audio_path: audioPath, duration_ms: durationMs },
     }, {
       signal: controller.signal,
       onProgress(message) {

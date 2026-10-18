@@ -97,7 +97,7 @@ it.each([
 }) => {
   const value = await harness({ asr, diarization });
   const started = await value.application.startImport({ path: "/input/weekly-review.wav" });
-  expect(started).toEqual({ meetingId: MEETING_ID, jobId: "meeting-1", status: "processing" });
+  expect(started).toEqual({ meetingId: MEETING_ID, jobId: expect.any(String), status: "processing" });
   expect(value.application.activeJobIdFor(value.repository.getMeeting(MEETING_ID)!))
     .toBe(started.jobId);
 

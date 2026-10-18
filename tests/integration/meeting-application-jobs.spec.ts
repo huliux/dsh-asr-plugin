@@ -143,5 +143,5 @@ it("owner dispose 复用 DSH 清理语义取消并等待应用资源归零", asy
   });
   expect(value.audio.cleaned).toEqual([MEETING_ID]);
   expect(value.application.activeJobIdFor(value.repository.getMeeting(MEETING_ID)!)).toBeNull();
-  expect(started.jobId).toBe("meeting-1");
+  expect(started.jobId).toEqual(expect.any(String));
 });

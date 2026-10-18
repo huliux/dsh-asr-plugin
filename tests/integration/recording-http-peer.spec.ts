@@ -27,7 +27,7 @@ it.skipIf(lan === undefined)("rejects a non-loopback peer even with an authentic
     const response = await shared.fetch(new Request(`http://dsh.internal${req.url}`, {
       method: req.method ?? "POST", headers: { host: req.headers.host!, "content-type": "application/json" },
       body: Buffer.concat(chunks),
-    }));
+    }), connection.browserPeer);
     res.writeHead(response.status); res.end(await response.text());
   });
   try {

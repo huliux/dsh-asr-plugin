@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
+import { evaluatePluginCompatibility } from "@deepseek-ai/dsh-app-boot";
 
 import { runCommand, runRequired, startObservedCommand, stopProcessTree } from "./release/p1b-probe-process.mjs";
 import { configureIsolatedDependencyPolicy } from "./release/p1b-probe-runtime.mjs";
@@ -46,7 +47,9 @@ async function rpcResponse(method = "state", payload = {}, authenticated = true)
 
 try {
   const version = await runRequired(dsh, ["--version"], world, "VERSION_FAILED");
-  assert.equal(version.stdout.trim(), "0.2.0-rc.2", "This qualification targets one installed DSH version");
+  const manifest = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  assert.equal(evaluatePluginCompatibility(manifest, {}, version.stdout.trim()), undefined,
+    "This qualification requires a declared compatible DSH version");
   await runRequired(dsh, ["plugin", "--profile", "web", "add", "--ignore-scripts", archive,
     "--store-dir", join(root, "pnpm-store")], world, "INSTALL_FAILED");
   await configureIsolatedDependencyPolicy(join(env.DSH_HOME, "profiles/web"), join(root, "pnpm-store"));

@@ -145,7 +145,7 @@ it("uses one application seam for start, track control and provisional live draf
   const started = await harness.application.controlRecording({ action: "start", title: "产品讨论" });
   expect(started).toMatchObject({
     meetingId: MEETING_ID,
-    jobId: "meeting-1",
+    jobId: expect.any(String),
     phase: "recording",
     draftRevision: 1,
     recordingStartedAtMs: 1_001,

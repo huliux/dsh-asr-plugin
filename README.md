@@ -26,7 +26,7 @@ for the full example and environment details.
 
 | Component | Requirement |
 | --- | --- |
-| Host | DSH 0.2.0-rc.2 |
+| Host | DSH 0.2.0-rc.2 or 0.2.1-rc.2 |
 | Runtime | Node.js 24 |
 | Platform | macOS, Apple Silicon (`darwin` / `arm64`) |
 | Microphone API | macOS 13.5 or later |
