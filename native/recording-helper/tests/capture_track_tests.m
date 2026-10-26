@@ -21,6 +21,17 @@ static BOOL WaitForState(RHCaptureTrack *track, NSString *state, NSTimeInterval 
   return NO;
 }
 
+static BOOL WaitForStateAndError(RHCaptureTrack *track, NSString *state,
+                                NSString *errorCode, NSTimeInterval seconds) {
+  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:seconds];
+  while (deadline.timeIntervalSinceNow > 0) {
+    [track refresh:nil];
+    if ([track.state isEqualToString:state] && [track.errorCode isEqualToString:errorCode]) return YES;
+    usleep(20000);
+  }
+  return NO;
+}
+
 static void TestInvalidOnlineChunkOnlyFailsItsTrack(NSString *binaryRoot) {
   NSString *root = [NSTemporaryDirectory() stringByAppendingPathComponent:
       [NSString stringWithFormat:@"recording-helper-track-invalid-%@", NSUUID.UUID.UUIDString]];
@@ -70,15 +81,17 @@ static void TestSilentSystemDoesNotClaimPermissionDenial(NSString *binaryRoot) {
   RHCaptureTrack *mic = [[RHCaptureTrack alloc] initWithName:@"mic"
       recordingRoot:[root stringByAppendingPathComponent:@"recording"] binaryRoot:binaryRoot
       registry:registry chunkHandler:nil stateHandler:nil error:nil];
+  NSString *signalGate = [root stringByAppendingPathComponent:@"allow-signal"];
   setenv("RH_FAKE_SILENT_START", "1", 1);
+  setenv("RH_FAKE_SIGNAL_GATE", signalGate.UTF8String, 1);
   Require([system requestOn:nil] && [mic requestOn:nil], @"signal fixtures must start");
-  Require(WaitForState(system, @"on", 0.8), @"silent system capture must stay running");
-  Require([system.errorCode isEqualToString:@"SYSTEM_AUDIO_NO_SIGNAL"],
+  Require(WaitForStateAndError(system, @"on", @"SYSTEM_AUDIO_NO_SIGNAL", 5.0),
           @"all-zero system PCM must report no signal, not permission denial");
   pid_t pid = system.processID;
-  Require(WaitForState(mic, @"on", 0.5) && mic.errorCode == nil,
+  Require(WaitForState(mic, @"on", 5.0) && mic.errorCode == nil,
           @"microphone silence must not receive a system warning");
-  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:2.0];
+  Require([NSData.data writeToFile:signalGate atomically:YES], @"signal gate must open");
+  NSDate *deadline = [NSDate dateWithTimeIntervalSinceNow:5.0];
   while (system.errorCode != nil && deadline.timeIntervalSinceNow > 0) {
     [system refresh:nil];
     usleep(20000);
@@ -87,10 +100,13 @@ static void TestSilentSystemDoesNotClaimPermissionDenial(NSString *binaryRoot) {
           @"nonzero PCM must clear the warning without restarting capture");
   [system requestOff:nil];
   Require(system.errorCode == nil && !system.requested, @"off must clear the warning");
-  Require([system requestOn:nil] && WaitForState(system, @"on", 0.8) &&
-              [system.errorCode isEqualToString:@"SYSTEM_AUDIO_NO_SIGNAL"],
+  Require([NSFileManager.defaultManager removeItemAtPath:signalGate error:nil],
+          @"retry must begin with a closed signal gate");
+  Require([system requestOn:nil] &&
+              WaitForStateAndError(system, @"on", @"SYSTEM_AUDIO_NO_SIGNAL", 5.0),
           @"retry must reset signal observation");
   unsetenv("RH_FAKE_SILENT_START");
+  unsetenv("RH_FAKE_SIGNAL_GATE");
   [system stop];
   [mic stop];
   [NSFileManager.defaultManager removeItemAtPath:root error:nil];

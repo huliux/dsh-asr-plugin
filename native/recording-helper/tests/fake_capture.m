@@ -32,7 +32,11 @@ static void WriteWave(NSString *directory, NSString *track, double start, NSUInt
   if (signal) ((uint8_t *)data.mutableBytes)[44] = 1;
   double end = start + (double)frames / 16000.0;
   NSString *name = [NSString stringWithFormat:@"%.7f-%.7f-%@.wav", start, end, track];
-  [data writeToFile:[directory stringByAppendingPathComponent:name] atomically:NO];
+  NSString *temporary = [directory stringByAppendingPathComponent:
+      [NSString stringWithFormat:@"temp_chunk_%@.wav", NSUUID.UUID.UUIDString]];
+  if (![data writeToFile:temporary atomically:NO] ||
+      ![NSFileManager.defaultManager moveItemAtPath:temporary
+          toPath:[directory stringByAppendingPathComponent:name] error:nil]) exit(74);
 }
 
 static void WriteInvalidWave(NSString *directory, NSString *track, double start) {
@@ -63,8 +67,6 @@ int main(int argc, const char *argv[]) {
         dataPath != nil) return 64;
     NSString *track = [source isEqualToString:@"microphone"] ? @"mic" : @"system";
     if ([track isEqualToString:@"mic"]) puts("### AUDIO PERMISSION: OK TO RECORD");
-    puts("Audio recording process started");
-    fflush(stdout);
     double start = NSDate.date.timeIntervalSince1970;
     NSString *invalidOnlineTrack =
         NSProcessInfo.processInfo.environment[@"RH_FAKE_INVALID_ONLINE_TRACK"];
@@ -82,9 +84,16 @@ int main(int argc, const char *argv[]) {
     } else {
       WriteWave(directory, track, start, silentStart ? 80000 : 160, NO);
     }
+    puts("Audio recording process started");
+    fflush(stdout);
     if (silentStart) {
-      usleep(1000000);
-      WriteWave(directory, track, start + 5.0, 160, YES);
+      NSString *signalGate = NSProcessInfo.processInfo.environment[@"RH_FAKE_SIGNAL_GATE"];
+      if (signalGate != nil) {
+        while (!gStop && ![NSFileManager.defaultManager fileExistsAtPath:signalGate]) usleep(10000);
+      } else {
+        usleep(1000000);
+      }
+      if (!gStop) WriteWave(directory, track, start + 5.0, 160, YES);
     }
     while (!gStop) usleep(10000);
     if ([NSProcessInfo.processInfo.environment[@"RH_FAKE_INVALID_TAIL"] isEqualToString:@"1"]) {
