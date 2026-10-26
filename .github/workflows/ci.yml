@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  checks:
+    name: Typecheck and tests
+    runs-on: macos-26
+    timeout-minutes: 20
+    env:
+      DSH_HOME: ${{ runner.temp }}/dsh-checks
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - name: Install the declared pnpm version
+        run: npm install --global "$(node -p "require('./package.json').packageManager")"
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Generate build assets
+        run: pnpm run build
+      - name: Typecheck, test and rebuild
+        run: pnpm run check
+      - name: Check whitespace and tracked source
+        run: |
+          git diff --check HEAD^ HEAD
+          git diff --exit-code
+
+  site:
+    name: Site and links
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - name: Build and check public site
+        run: node scripts/build-site.mjs "$RUNNER_TEMP/project-site"
+
+  native-package:
+    name: Native build and package
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.0.1.app/Contents/Developer
+      DSH_HOME: ${{ runner.temp }}/dsh-native
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up qualified Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.18.0'
+      - name: Verify Apple Silicon and qualified toolchain
+        run: |
+          test "$(uname -m)" = arm64
+          xcodebuild -version
+          xcrun clang --version
+          xcrun --sdk macosx --show-sdk-version
+          node --input-type=module -e "import { appleBuildEnvironment } from './scripts/release/apple-build-environment.mjs'; appleBuildEnvironment();"
+      - name: Install the declared pnpm version
+        run: npm install --global "$(node -p "require('./package.json').packageManager")"
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build and verify the complete package
+        run: pnpm run build:closed-pilot
+      - name: Independently rebuild FBank
+        run: pnpm run build:native:fbank
+      - name: Test native output and built plugin boundaries
+        env:
+          DSH_RUN_FBANK_REBUILD: '1'
+          DSH_RUN_PUBLIC_HELPER_RELEASE: '1'
+          DSH_RUN_P1A_PLUGIN_BUILT: '1'
+        run: >-
+          pnpm exec vitest run
+          tests/integration/fbank-rebuild.spec.ts
+          tests/integration/public-recording-helper-release.spec.ts
+          tests/integration/plugin-assembly.spec.ts
+          tests/integration/meeting-tools.spec.ts
+      - name: Test the staging Helper and native protocols
+        run: pnpm run probe:native:recording-helper
+      - name: Verify public archive preparation without publishing
+        run: pnpm run pack:release --version "$(node -p "require('./package.json').version")" --output "$RUNNER_TEMP/package-check"
+      - name: Check tracked source
+        run: git diff --exit-code
