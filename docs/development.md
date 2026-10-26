@@ -87,7 +87,8 @@ Batch RUN v2 retains its physical-exit contract.
 
 ### Continuous integration
 
-[CI](../.github/workflows/ci.yml) runs on pull requests to `main`, pushes to
+[CI](https://github.com/huliux/dsh-asr-plugin/blob/main/.github/workflows/ci.yml)
+runs on pull requests to `main`, pushes to
 `main`, and manual dispatch. Its three checks are:
 
 - **Typecheck and tests**: on macOS ARM64 with Node.js 24 and the manifest's
