@@ -85,6 +85,35 @@ Batch RUN v2 retains its physical-exit contract.
 
 ## Verification
 
+### Continuous integration
+
+[CI](https://github.com/huliux/dsh-asr-plugin/blob/main/.github/workflows/ci.yml)
+runs on pull requests to `main`, pushes to
+`main`, and manual dispatch. Its three checks are:
+
+- **Typecheck and tests**: on macOS ARM64 with Node.js 24 and the manifest's
+  pnpm version, install the frozen lockfile, generate assets, then run `check`.
+- **Site and links**: build the public site and check its local links on Linux.
+- **Native build and package**: on macOS ARM64 with Node.js 24.18.0 and Xcode
+  26.0.1, verify the qualified clang/SDK, build the complete package, independently
+  rebuild FBank, run the built-plugin and Helper integration suites, and verify
+  public archive preparation. Pinned native hashes remain enforced.
+
+Actions are pinned to commit SHAs. Jobs have read-only repository permissions,
+do not persist checkout credentials, and use isolated temporary `DSH_HOME`
+directories. CI does not publish packages, deploy the site, download model
+weights, or access existing user profiles. The separate Pages workflow deploys
+the site after relevant `main` changes.
+
+CI's synthetic tests and signature checks do not establish microphone or system
+audio permission behavior, non-silent physical capture, model accuracy, or a
+supported OS matrix. Model-backed and real recording journeys remain release
+qualification steps in [publishing](publishing.md). A runner toolchain change
+must pass the existing qualification checks; do not update binary hashes merely
+to make CI pass.
+
+### Local and opt-in checks
+
 `pnpm run check` runs type checking, ordinary tests and the TypeScript/client build.
 Opt-in tests require the resources named by their environment gates.
 Ordinary checks do not measure speech accuracy, recording permission behavior
