@@ -27,7 +27,7 @@ The development manifest retains `private: true` to prevent accidental publicati
    permission admission, non-silent capture, permission recovery and updates.
 
 ```sh
-pnpm run pack:release --version 0.1.3 --output /absolute/path/to/new-release-directory
+pnpm run pack:release --version 0.1.4 --output /absolute/path/to/new-release-directory
 ```
 
 The version is an example; choose a previously unpublished stable version.

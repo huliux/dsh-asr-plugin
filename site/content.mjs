@@ -18,7 +18,7 @@ export const locales = {
         title: 'DSH 本地会议转写与 AI 总结',
         description: 'dsh-asr-plugin 是面向 Apple Silicon macOS 的 DeepSeek Harness 非官方插件，支持本地录音、音频导入、会议转写和通过会议引用生成阶段性总结。',
         body: `<p>在 Mac 上录制会议、转写音频，再在 DSH 聊天中引用会议，整理要点和行动项。</p>
-<p class="muted">Apple Silicon macOS · Node.js 24 · 已验证 DSH 0.2.0-rc.2 / 0.2.1-rc.2</p>
+<p class="muted">Apple Silicon macOS · Node.js 24 · 已验证 DSH 0.2.0-rc.2 / 0.2.1-rc.2 / 0.2.1-rc.3</p>
 ${command('复制命令')}
 <p>也可以从 DSH 插件管理页面安装。首次使用需要在插件设置中下载模型。</p>
 <div class="links"><a href="start.html">安装与准备</a><a href="${repo}">GitHub 源码</a><a href="${npm}">npm 包</a></div>
@@ -36,7 +36,7 @@ ${image('recording-live-summary', '系统音频仍在录制，聊天中已生成
         title: '安装与第一次转写',
         description: '在 Apple Silicon Mac 上安装 dsh-asr-plugin：检查 DSH 和 Node.js 版本，下载转写模型，设置录音权限并生成第一份会议总结。',
         body: `<h2>1. 检查运行环境</h2>
-<p>使用 Apple Silicon Mac、Node.js 24。当前验证的宿主版本为 DSH 0.2.0-rc.2 和 0.2.1-rc.2。</p>
+<p>使用 Apple Silicon Mac、Node.js 24。当前验证的宿主版本为 DSH 0.2.0-rc.2、0.2.1-rc.2 和 0.2.1-rc.3。</p>
 <p>麦克风 API 需要 macOS 13.5 或以上；系统音频及双轨 API 需要 macOS 14.2 或以上。这些是 API 要求，不代表所有系统版本均已测试。桌面和 Web 模式都在运行 DSH 的 Mac 上处理音频。</p>
 <h2>2. 安装插件</h2>
 <p>在 DSH 插件管理页面安装 <code>@huliux/dsh-asr-plugin</code>。使用 Web 配置时，也可执行：</p>
@@ -82,7 +82,7 @@ ${image('meeting-summary', '引用已完成的会议后，聊天显示决定与�
       faq: {
         title: '常见问题',
         description: '了解 dsh-asr-plugin 的平台限制、本地转写与在线总结的数据处理、模型下载、录音权限、说话人标签和更新注意事项。',
-        body: `<h2>哪些平台可以使用？</h2><p>目前面向 Apple Silicon macOS，使用 Node.js 24，已验证 DSH 0.2.0-rc.2 / 0.2.1-rc.2。Windows、Linux 和 Intel Mac 不支持。API 系统要求见 <a href="start.html">快速开始</a>。</p>
+        body: `<h2>哪些平台可以使用？</h2><p>目前面向 Apple Silicon macOS，使用 Node.js 24，已验证 DSH 0.2.0-rc.2 / 0.2.1-rc.2 / 0.2.1-rc.3。Windows、Linux 和 Intel Mac 不支持。API 系统要求见 <a href="start.html">快速开始</a>。</p>
 <h2>这是 DeepSeek 官方插件吗？</h2><p>不是。这是 huliux 维护的开源社区插件，与 DeepSeek 官方产品支持范围独立。</p>
 <h2>会议数据会离开本机吗？</h2><p>模型准备后，音频推理在本机进行。使用在线 LLM 阅读或总结会议时，引用的转写内容会发送给 DSH 配置的模型提供商，其配置和条款适用于该操作。</p>
 <h2>为什么安装后还需要下载模型？</h2><p>安装包包含运行代码、原生组件和录音 Helper，不包含模型权重。基础模型约 278 MiB；可选标点模型约 274 MiB。模型按固定上游版本下载并检查大小和 SHA-256。离线准备见 ${source('docs/model-assets.md', '模型文档')}。</p>
@@ -105,7 +105,7 @@ ${image('meeting-summary', '引用已完成的会议后，聊天显示决定与�
         title: 'Local meeting transcription for DSH',
         description: 'dsh-asr-plugin is an unofficial DeepSeek Harness plugin for Apple Silicon macOS. Record or import audio, transcribe locally, and reference meetings for AI summaries and action items.',
         body: `<p>Record meetings on your Mac, transcribe audio locally, then reference a meeting in DSH to summarize decisions and action items.</p>
-<p class="muted">Apple Silicon macOS · Node.js 24 · Verified with DSH 0.2.0-rc.2 / 0.2.1-rc.2</p>
+<p class="muted">Apple Silicon macOS · Node.js 24 · Verified with DSH 0.2.0-rc.2 / 0.2.1-rc.2 / 0.2.1-rc.3</p>
 ${command('Copy command')}
 <p>You can also install from the DSH Plugins page. Download the models in plugin settings before your first transcription.</p>
 <div class="links"><a href="start.html">Installation guide</a><a href="${repo}">GitHub source</a><a href="${npm}">npm package</a></div>
@@ -122,7 +122,7 @@ ${image('recording-live-summary', 'System audio recording continues while DSH di
       start: {
         title: 'Installation and your first transcript',
         description: 'Install dsh-asr-plugin on an Apple Silicon Mac: check DSH and Node.js versions, download models, check recording permissions, and summarize your first meeting.',
-        body: `<h2>1. Check the environment</h2><p>Use an Apple Silicon Mac and Node.js 24. The verified host versions are DSH 0.2.0-rc.2 and 0.2.1-rc.2.</p>
+        body: `<h2>1. Check the environment</h2><p>Use an Apple Silicon Mac and Node.js 24. The verified host versions are DSH 0.2.0-rc.2, 0.2.1-rc.2 and 0.2.1-rc.3.</p>
 <p>Microphone APIs require macOS 13.5 or later; system audio and dual-track APIs require macOS 14.2 or later. These are API requirements, not a tested OS matrix. Desktop and Web modes both process audio on the Mac running DSH.</p>
 <h2>2. Install the plugin</h2><p>Install <code>@huliux/dsh-asr-plugin</code> from the DSH Plugins page. For a Web profile, you can also run:</p>
 ${command('Copy command')}
@@ -160,7 +160,7 @@ ${image('meeting-summary', 'DSH summarizes decisions and action items from a com
       faq: {
         title: 'Frequently asked questions',
         description: 'Platform support, local transcription and online summaries, model downloads, recording permissions, speaker labels and updates for the dsh-asr-plugin community plugin.',
-        body: `<h2>Which platforms are supported?</h2><p>Apple Silicon macOS with Node.js 24; verified with DSH 0.2.0-rc.2 and 0.2.1-rc.2. Windows, Linux and Intel Macs are unsupported. See <a href="start.html">getting started</a> for API system requirements.</p>
+        body: `<h2>Which platforms are supported?</h2><p>Apple Silicon macOS with Node.js 24; verified with DSH 0.2.0-rc.2, 0.2.1-rc.2 and 0.2.1-rc.3. Windows, Linux and Intel Macs are unsupported. See <a href="start.html">getting started</a> for API system requirements.</p>
 <h2>Is this an official DeepSeek plugin?</h2><p>No. This open-source community plugin is maintained by huliux, independently of DeepSeek's official product support.</p>
 <h2>Does meeting data leave my Mac?</h2><p>Audio inference runs locally after model preparation. Reading or summarizing a meeting with an online LLM sends the referenced transcript to DSH's configured provider. Host configuration and provider terms govern that operation.</p>
 <h2>Why do I need a separate model download?</h2><p>Packages contain runtime code, native components and the recording Helper, but no weights. Base models are approximately 278 MiB; optional punctuation models are approximately 274 MiB. Downloads use pinned upstream revisions with size and SHA-256 checks. See ${source('docs/model-assets.md', 'model assets')} for offline staging.</p>
