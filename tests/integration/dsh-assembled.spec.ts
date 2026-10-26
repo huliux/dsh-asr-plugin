@@ -74,7 +74,8 @@ async function loadComposition(): Promise<WorkerSpawner> {
   return ProbePlugin.requireAssembledSpawner();
 }
 
-function fixtureClient(spawner: WorkerSpawner, code: string, readyTimeoutMs = 100): WorkerClient {
+// Startup timing has a separate test; allow CI time to spawn the crash fixture.
+function fixtureClient(spawner: WorkerSpawner, code: string, readyTimeoutMs = 5_000): WorkerClient {
   return new WorkerClient({
     kind: "asr",
     expectedFingerprint: "0".repeat(64),
