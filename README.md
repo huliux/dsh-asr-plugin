@@ -26,7 +26,7 @@ for the full example and environment details.
 
 | Component | Requirement |
 | --- | --- |
-| Host | DSH 0.2.0-rc.2 or 0.2.1-rc.2 |
+| Host | DSH 0.2.0-rc.2, 0.2.1-rc.2 or 0.2.1-rc.3 |
 | Runtime | Node.js 24 |
 | Platform | macOS, Apple Silicon (`darwin` / `arm64`) |
 | Microphone API | macOS 13.5 or later |
@@ -42,11 +42,11 @@ Install `@huliux/dsh-asr-plugin` from the DSH Plugins page. Web profiles also
 support the CLI:
 
 ```sh
-dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.3
+dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.4
 ```
 
-For DSH 0.2.1-rc.2, upgrade to plugin 0.1.3. In the desktop Plugins page,
-choose **Add plugin** and enter `@huliux/dsh-asr-plugin@0.1.3`; Web users can
+For DSH 0.2.1-rc.3, upgrade to plugin 0.1.4. In the desktop Plugins page,
+choose **Add plugin** and enter `@huliux/dsh-asr-plugin@0.1.4`; Web users can
 rerun the command above. Restart DSH if requested. Supported hosts load this
 version without a compatibility exemption.
 

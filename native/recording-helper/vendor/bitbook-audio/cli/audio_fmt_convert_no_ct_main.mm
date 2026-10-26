@@ -538,6 +538,38 @@ struct MicRecordingState {
 
 static MicRecordingState* g_micState = nullptr;
 
+// Local modification: never publish an empty microphone tail as a closed chunk.
+static void finalizeMicRecordingChunk(MicRecordingState& state) {
+    if (state.currentChunkFile) {
+        Logger::info("Stopping ChunkedWavFileSinkBase and finalizing the current chunk.");
+        ExtAudioFileDispose(state.currentChunkFile);
+        state.currentChunkFile = nullptr;
+
+        // Rollover opens the next file before another callback supplies audio.
+        // A stop at that boundary leaves a header-only WAV, not an audio chunk.
+        if (state.totalFramesWritten == state.chunkStartFrame) {
+            std::error_code ec;
+            std::filesystem::remove(state.currentChunkPath, ec);
+            return;
+        }
+
+        // 计算时间戳
+        double chunkStartSec = state.recordingStartTime +
+            (static_cast<double>(state.chunkStartFrame) / state.sampleRate);
+        double chunkEndSec = state.recordingStartTime +
+            (static_cast<double>(state.totalFramesWritten) / state.sampleRate);
+
+        // 重命名文件
+        std::string newName = formatTimestamp(chunkStartSec) + "-" +
+            formatTimestamp(chunkEndSec) + "-" + state.sourceLabel + ".wav";
+        std::string newPath = (std::filesystem::path(state.outputDir) / newName).string();
+
+        std::error_code ec;
+        std::filesystem::rename(state.currentChunkPath, newPath, ec);
+        Logger::info("Renaming chunk file from " + state.currentChunkPath + " to " + newPath);
+    }
+}
+
 void micAudioQueueCallback(void* userData,
                            AudioQueueRef queue,
                            AudioQueueBufferRef buffer,
@@ -819,27 +851,7 @@ int runMicrophoneCapture(const ArgMap& args) {
     Logger::info("Stopping recording for this instance.");
     AudioQueueStop(state.queue, true);
 
-    // 保存最后一个分块
-    if (state.currentChunkFile) {
-        Logger::info("Stopping ChunkedWavFileSinkBase and finalizing the current chunk.");
-        ExtAudioFileDispose(state.currentChunkFile);
-        state.currentChunkFile = nullptr;
-
-        // 计算时间戳
-        double chunkStartSec = state.recordingStartTime +
-            (static_cast<double>(state.chunkStartFrame) / state.sampleRate);
-        double chunkEndSec = state.recordingStartTime +
-            (static_cast<double>(state.totalFramesWritten) / state.sampleRate);
-
-        // 重命名文件
-        std::string newName = formatTimestamp(chunkStartSec) + "-" +
-            formatTimestamp(chunkEndSec) + "-" + state.sourceLabel + ".wav";
-        std::string newPath = (std::filesystem::path(outputDir) / newName).string();
-
-        std::error_code ec;
-        std::filesystem::rename(state.currentChunkPath, newPath, ec);
-        Logger::info("Renaming chunk file from " + state.currentChunkPath + " to " + newPath);
-    }
+    finalizeMicRecordingChunk(state);
 
     AudioQueueDispose(state.queue, true);
     g_micState = nullptr;

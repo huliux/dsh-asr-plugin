@@ -38,7 +38,7 @@ Tools/Approval, Jobs and Subprocess. The plugin owns managed audio, meeting
 persistence, model delivery, recording protocols and ASR/speaker processing.
 
 `engines.dsh` and DSH peer ranges declare the verified host versions explicitly.
-Development dependencies target DSH 0.2.1-rc.2; retain 0.2.0-rc.2 admission for
+Development dependencies target DSH 0.2.1-rc.3; retain 0.2.0-rc.2 and 0.2.1-rc.2 admission for
 existing installations. Host upgrades require compatibility admission, client
 and host integration checks before extending these ranges. Do not substitute
 profile version exemptions for qualification. `probe:p0-07:config` checks the

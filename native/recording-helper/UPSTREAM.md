@@ -15,6 +15,8 @@ See [third-party notices](THIRD_PARTY_NOTICES.md).
 - Set `AggregateDeviceConfig.isPrivate = true`.
 - Guard Process Tap creation and destruction with macOS 14.2 availability.
 - Close and flush system-audio WAV output before renaming a completed chunk.
+- Discard an empty microphone tail when stopping immediately after a chunk
+  rollover; preserve every nonempty tail and its frame-derived timestamps.
 - Read the current sample rate and channel count before consuming each system
   input buffer. Close the old-format tail and recreate the converter when the
   input format changes.
