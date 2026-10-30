@@ -18,6 +18,10 @@ Plugin 0.1.5 supports DSH 0.2.0-rc.2, 0.2.1-rc.2, 0.2.1-rc.3 and 0.2.1-rc.5. To 
 profile, choose **Add plugin** in the app and enter
 `@huliux/dsh-asr-plugin@0.1.5`. Web users can rerun the command above.
 Restart if requested; the supported versions require no compatibility exemption.
+If the desktop installer reports that the package is already installed, use the
+verified versioned archive from [GitHub package downloads](#github-package-downloads)
+as the **Add plugin** input. Enter its absolute path to update the package while
+preserving the existing plugin configuration and meeting data.
 
 Published packages contain the compiled client, native add-ons and signed
 recording Helper. Model weights are downloaded separately through settings.

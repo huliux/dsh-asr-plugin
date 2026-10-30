@@ -45,6 +45,10 @@ dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.5
 使用 DSH 0.2.1-rc.5 时，请升级至插件 0.1.5。桌面版在插件页选择
 **添加插件**，输入 `@huliux/dsh-asr-plugin@0.1.5`；Web 用户可再次运行
 上面的命令。若宿主提示，请重启 DSH。支持的宿主版本无需添加兼容性豁免。
+若桌面安装器提示“该插件已安装”，请从
+[GitHub Release](https://github.com/huliux/dsh-asr-plugin/releases/tag/v0.1.5)
+下载对应版本的 `.tgz` 和 `SHA256SUMS`，校验后在**添加插件**中输入安装包的
+绝对路径。此更新方式保留现有插件配置和会议数据。
 
 安装包包含原生模块和采用 ad-hoc 签名的录音 Helper。Helper 未经过 Apple
 公证；安装和更新后，macOS 可能要求权限或安全确认。请保持系统安全保护开启。
