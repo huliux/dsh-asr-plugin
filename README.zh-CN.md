@@ -24,8 +24,7 @@
 
 | 组件 | 要求 |
 | --- | --- |
-| 宿主 | DSH 0.2.0-rc.2、0.2.1-rc.2 或 0.2.1-rc.3 |
-| 本地兼容包 | DSH 0.2.1-rc.5（`0.1.5-compat.1`，本地归档） |
+| 宿主 | DSH 0.2.0-rc.2、0.2.1-rc.2、0.2.1-rc.3 或 0.2.1-rc.5 |
 | 运行时 | Node.js 24 |
 | 平台 | macOS、Apple Silicon（`darwin` / `arm64`） |
 | 麦克风 API | macOS 13.5 或更高版本 |
@@ -40,22 +39,12 @@ Windows、Linux 和 Intel Mac 不受支持。
 在 DSH 插件页安装 `@huliux/dsh-asr-plugin`。Web 配置也支持命令行安装：
 
 ```sh
-dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.4
+dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.5
 ```
 
-使用 DSH 0.2.1-rc.3 时，请升级至插件 0.1.4。桌面版在插件页选择
-**添加插件**，输入 `@huliux/dsh-asr-plugin@0.1.4`；Web 用户可再次运行
+使用 DSH 0.2.1-rc.5 时，请升级至插件 0.1.5。桌面版在插件页选择
+**添加插件**，输入 `@huliux/dsh-asr-plugin@0.1.5`；Web 用户可再次运行
 上面的命令。若宿主提示，请重启 DSH。支持的宿主版本无需添加兼容性豁免。
-
-DSH 0.2.1-rc.5 请使用本地兼容包
-`huliux-dsh-asr-plugin-0.1.5-compat.1.tgz`；npm 0.1.4 仍只支持此前声明的宿主。
-桌面版在插件页添加归档的绝对路径，Web 版也可执行：
-
-```sh
-dsh plugin --profile web add --ignore-scripts /absolute/path/huliux-dsh-asr-plugin-0.1.5-compat.1.tgz
-```
-
-该预览包尚未发布到 npm。安装后请保留归档所在路径，更新时保留现有会议与模型数据。
 
 安装包包含原生模块和采用 ad-hoc 签名的录音 Helper。Helper 未经过 Apple
 公证；安装和更新后，macOS 可能要求权限或安全确认。请保持系统安全保护开启。

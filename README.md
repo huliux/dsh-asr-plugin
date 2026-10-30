@@ -26,8 +26,7 @@ for the full example and environment details.
 
 | Component | Requirement |
 | --- | --- |
-| Host | DSH 0.2.0-rc.2, 0.2.1-rc.2 or 0.2.1-rc.3 |
-| Local compatibility build | DSH 0.2.1-rc.5 (`0.1.5-compat.1`, local archive) |
+| Host | DSH 0.2.0-rc.2, 0.2.1-rc.2, 0.2.1-rc.3 or 0.2.1-rc.5 |
 | Runtime | Node.js 24 |
 | Platform | macOS, Apple Silicon (`darwin` / `arm64`) |
 | Microphone API | macOS 13.5 or later |
@@ -43,24 +42,13 @@ Install `@huliux/dsh-asr-plugin` from the DSH Plugins page. Web profiles also
 support the CLI:
 
 ```sh
-dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.4
+dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.5
 ```
 
-For DSH 0.2.1-rc.3, upgrade to plugin 0.1.4. In the desktop Plugins page,
-choose **Add plugin** and enter `@huliux/dsh-asr-plugin@0.1.4`; Web users can
+For DSH 0.2.1-rc.5, upgrade to plugin 0.1.5. In the desktop Plugins page,
+choose **Add plugin** and enter `@huliux/dsh-asr-plugin@0.1.5`; Web users can
 rerun the command above. Restart DSH if requested. Supported hosts load this
 version without a compatibility exemption.
-
-DSH 0.2.1-rc.5 requires the local compatibility archive
-`huliux-dsh-asr-plugin-0.1.5-compat.1.tgz`; npm 0.1.4 retains its earlier host
-contract. Add the absolute archive path in the desktop Plugins page, or use:
-
-```sh
-dsh plugin --profile web add --ignore-scripts /absolute/path/huliux-dsh-asr-plugin-0.1.5-compat.1.tgz
-```
-
-This preview is not published to npm. Keep the archive at its installation path
-and preserve existing meeting and model data when updating.
 
 The package includes native add-ons and an ad-hoc signed recording Helper.
 The Helper is not notarized; macOS may require permission or security approval
