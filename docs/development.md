@@ -38,11 +38,14 @@ Tools/Approval, Jobs and Subprocess. The plugin owns managed audio, meeting
 persistence, model delivery, recording protocols and ASR/speaker processing.
 
 `engines.dsh` and DSH peer ranges declare the verified host versions explicitly.
-Development dependencies target DSH 0.2.1-rc.3; retain 0.2.0-rc.2 and 0.2.1-rc.2 admission for
+Development dependencies target DSH 0.2.1-rc.5; retain 0.2.0-rc.2, 0.2.1-rc.2 and 0.2.1-rc.3 admission for
 existing installations. Host upgrades require compatibility admission, client
 and host integration checks before extending these ranges. Do not substitute
 profile version exemptions for qualification. `probe:p0-07:config` checks the
 installed CLI against the development host version.
+
+Plugin 0.1.5 includes the verified rc.5 host contract. Release preparation
+follows [publishing](publishing.md); the development manifest remains private.
 
 `src/index.ts` adapts DSH to `MeetingApplication`. The Repository stores meeting,
 transcript-version and audio facts. A RecordingSession owns one live recording,

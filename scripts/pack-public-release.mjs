@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
 if (args.length !== 4 || args[0] !== "--version" || args[2] !== "--output") {
-  throw new Error("usage: pnpm pack:release --version 0.1.4 --output /absolute/new-directory");
+  throw new Error("usage: pnpm pack:release --version 0.1.5 --output /absolute/new-directory");
 }
 const [version, destination] = [args[1], args[3]];
 if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) {

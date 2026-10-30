@@ -26,7 +26,7 @@ for the full example and environment details.
 
 | Component | Requirement |
 | --- | --- |
-| Host | DSH 0.2.0-rc.2, 0.2.1-rc.2 or 0.2.1-rc.3 |
+| Host | DSH 0.2.0-rc.2, 0.2.1-rc.2, 0.2.1-rc.3 or 0.2.1-rc.5 |
 | Runtime | Node.js 24 |
 | Platform | macOS, Apple Silicon (`darwin` / `arm64`) |
 | Microphone API | macOS 13.5 or later |
@@ -42,13 +42,17 @@ Install `@huliux/dsh-asr-plugin` from the DSH Plugins page. Web profiles also
 support the CLI:
 
 ```sh
-dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.4
+dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.5
 ```
 
-For DSH 0.2.1-rc.3, upgrade to plugin 0.1.4. In the desktop Plugins page,
-choose **Add plugin** and enter `@huliux/dsh-asr-plugin@0.1.4`; Web users can
+For DSH 0.2.1-rc.5, upgrade to plugin 0.1.5. In the desktop Plugins page,
+choose **Add plugin** and enter `@huliux/dsh-asr-plugin@0.1.5`; Web users can
 rerun the command above. Restart DSH if requested. Supported hosts load this
-version without a compatibility exemption.
+version without a compatibility exemption. If the desktop installer reports
+that the package is already installed, download the versioned `.tgz` and
+`SHA256SUMS` from [GitHub Releases](https://github.com/huliux/dsh-asr-plugin/releases/tag/v0.1.5),
+verify the checksum, then enter the archive's absolute path in **Add plugin**.
+This update route preserves the existing plugin configuration and meeting data.
 
 The package includes native add-ons and an ad-hoc signed recording Helper.
 The Helper is not notarized; macOS may require permission or security approval
