@@ -1,0 +1,46 @@
+name: Synchronize dependency graph
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-graph-main
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - name: Install the declared pnpm version without lifecycle scripts
+        run: npm install --global --ignore-scripts "$(node -p "require('./package.json').packageManager")"
+      - name: Resolve the complete lockfile without installing packages
+        run: pnpm list --lockfile-only --json --depth Infinity > "$RUNNER_TEMP/dependency-tree.json"
+      - name: Prepare dependency snapshot
+        run: node scripts/dependency-snapshot.mjs "$RUNNER_TEMP/dependency-tree.json" "$RUNNER_TEMP/dependency-snapshot.json"
+      - name: Submit the current default-branch snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          if [ "$current" != "$GITHUB_SHA" ]; then
+            echo 'A newer main commit exists; its run will submit the snapshot.'
+            exit 0
+          fi
+          gh api --method POST "repos/$GITHUB_REPOSITORY/dependency-graph/snapshots" --input "$RUNNER_TEMP/dependency-snapshot.json"

@@ -108,6 +108,19 @@ directories. CI does not publish packages, deploy the site, download model
 weights, or access existing user profiles. The separate Pages workflow deploys
 the site after relevant `main` changes.
 
+The separate [dependency graph workflow](https://github.com/huliux/dsh-asr-plugin/blob/main/.github/workflows/dependencies.yml)
+submits a complete pnpm lockfile snapshot on every `main` push and supports
+manual dispatch. It uses the declared pnpm version's `list --lockfile-only`
+output, including development and cross-platform optional dependencies, without
+installing project packages or running their lifecycle scripts. Shared packages
+retain runtime scope when reachable from a production dependency. A stable
+detector/correlator replaces prior snapshots, and obsolete commits are skipped.
+Only this submission job has `contents: write`, as required by GitHub's dependency
+submission API; the token is exposed only to its final API step. It does not
+dismiss alerts. This keeps the submitted graph current when native manifest
+rescanning and alert results become inconsistent. Confirm alert state separately
+from a successful snapshot upload.
+
 CI's synthetic tests and signature checks do not establish microphone or system
 audio permission behavior, non-silent physical capture, model accuracy, or a
 supported OS matrix. Model-backed and real recording journeys remain release
