@@ -1,4 +1,4 @@
-import { useInstalledHostModules } from "./installed-host-modules.mjs";
+import { executeInstalledHostTool, mountInstalledHostTools, useInstalledHostModules } from "./installed-host-modules.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -25,7 +25,7 @@ let playback;
 let phase = "setup";
 
 function call(name, args) {
-  return context.tools.execute({ agent, callId: `model-mode-${++sequence}`, name,
+  return executeInstalledHostTool(context, { agent, callId: `model-mode-${++sequence}`, name,
     arguments: args, signal: new AbortController().signal });
 }
 
@@ -128,7 +128,8 @@ async function recordMeeting() {
 }
 
 try {
-  for (const name of ["dsh-agent", "dsh-system-prompt", "dsh-tools", "dsh-user-approval",
+  await mountInstalledHostTools(context, loadHost);
+  for (const name of ["dsh-agent", "dsh-user-approval",
     "dsh-jobs-local", "dsh-subprocess-local"]) await context.plugin((await loadHost(name)).default);
   await context.plugin(ToolJobs, { completionDelivery: "quiet" });
   context.on("approval/request", () => Promise.resolve("allowed-once"));

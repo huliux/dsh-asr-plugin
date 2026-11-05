@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { Context } from "@deepseek-ai/cordis";
 import AgentRegistry from "@deepseek-ai/dsh-agent";
 import LocalJobRegistry from "@deepseek-ai/dsh-jobs-local";
+import SessionProjectionRegistry from "@deepseek-ai/dsh-session-projection";
 
 import {
   MeetingApplication,
@@ -323,6 +324,7 @@ export async function createMeetingApplicationHarness(
   const root = await mkdtemp(join(tmpdir(), "dsh-asr-application-"));
   const repository = openMeetingRepository(join(root, "meetings.sqlite3"));
   const context = new Context();
+  await context.plugin(SessionProjectionRegistry);
   await context.plugin(AgentRegistry);
   await context.plugin(LocalJobRegistry);
   if (options.attachController !== false) context.jobs.attachController("meeting-test");

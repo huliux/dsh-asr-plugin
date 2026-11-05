@@ -39,6 +39,7 @@ function stubAgent(ctx: Context): { readonly agent: Agent; dispose(): Promise<vo
     id: session.id,
     options: {},
     session,
+    model: { current: () => undefined, select: () => { throw new Error("Unexpected model selection"); } },
     inbox: unusedAgentInbox(),
     status: "idle",
     ctx: scopeFiber.ctx,

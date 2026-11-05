@@ -5,13 +5,13 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import type { Agent } from "@deepseek-ai/dsh-agent";
-import { ToolCallId } from "@deepseek-ai/dsh-llm";
 import { Session, SessionId } from "@deepseek-ai/dsh-session";
 import { expect, it } from "vitest";
 
 import { registerMeetingTools } from "../../src/tools/meeting-tools.js";
 import { decodeTranscriptCursor, encodeTranscriptCursor } from "../../src/storage/query-cursor.js";
 import { createMeetingApplicationHarness } from "../helpers/meeting-application-fixture.js";
+import { executeHostTool } from "../helpers/execute-host-tool.js";
 import { commitMeeting, meetingId } from "../helpers/meeting-repository-fixture.js";
 
 const installedDsh = process.env.DSH_SPILL_PACKAGE_JSON;
@@ -22,8 +22,8 @@ async function readDeliveredPages(context: MeetingContext, agent: Agent, texts: 
   let cursor: string | undefined;
   let firstCursor: string | undefined;
   do {
-    const result = await context.tools.execute({
-      agent, callId: ToolCallId(`delivery-${received.length}`), name: "meeting_get",
+    const result = await executeHostTool(context, {
+      agent, callId: `delivery-${received.length}`, name: "meeting_get",
       arguments: { meeting_id: meetingId(90), projection: "agent", ...(cursor ? { cursor } : {}) },
       signal: new AbortController().signal,
     });
@@ -50,6 +50,7 @@ it.skipIf(installedDsh === undefined)("真实 DSH spill 后 Agent 仍能逐页�
   const spill = await import(pathToFileURL(resolveInstalled.resolve("@deepseek-ai/dsh-spill-policy")).href);
   const local = await import(pathToFileURL(resolveInstalled.resolve("@deepseek-ai/dsh-spill-local")).href);
   const tools = await import(pathToFileURL(resolveInstalled.resolve("@deepseek-ai/dsh-tools")).href);
+  const executor = await import(pathToFileURL(resolveInstalled.resolve("@deepseek-ai/dsh-tool-executor-native")).href);
   const prompt = await import(pathToFileURL(resolveInstalled.resolve("@deepseek-ai/dsh-system-prompt")).href);
   const root = await mkdtemp(join(tmpdir(), "dsh-asr-delivery-"));
   const harness = await createMeetingApplicationHarness();
@@ -57,6 +58,7 @@ it.skipIf(installedDsh === undefined)("真实 DSH spill 后 Agent 仍能逐页�
   try {
     await context.plugin(prompt.default);
     await context.plugin(tools.default);
+    await context.plugin(executor);
     await context.plugin(local.default, { root, cleanupPeriodDays: 0 });
     await context.plugin(spill, { maxInlineBytes: 50_000 });
     registerMeetingTools(context, harness.application);
@@ -68,8 +70,8 @@ it.skipIf(installedDsh === undefined)("真实 DSH spill 后 Agent 仍能逐页�
       meetingId: meetingId(90), version: 1, projection: "agent", lastSeq: 499,
       nextSegmentDigest: decodeTranscriptCursor(firstCursor!).nextSegmentDigest!,
     });
-    const skipped = await context.tools.execute({
-      agent, callId: ToolCallId("delivery-skipped"), name: "meeting_get",
+    const skipped = await executeHostTool(context, {
+      agent, callId: "delivery-skipped", name: "meeting_get",
       arguments: { meeting_id: meetingId(90), projection: "agent", cursor: skippedCursor },
       signal: new AbortController().signal,
     });

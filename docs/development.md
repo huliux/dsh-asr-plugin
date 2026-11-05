@@ -37,15 +37,20 @@ DSH owns lifecycle, configuration, UI and localization, sessions and workspaces,
 Tools/Approval, Jobs and Subprocess. The plugin owns managed audio, meeting
 persistence, model delivery, recording protocols and ASR/speaker processing.
 
-`engines.dsh` and DSH peer ranges declare the verified host versions explicitly.
-Development dependencies target DSH 0.2.1-rc.5; retain 0.2.0-rc.2, 0.2.1-rc.2 and 0.2.1-rc.3 admission for
-existing installations. Host upgrades require compatibility admission, client
-and host integration checks before extending these ranges. Do not substitute
-profile version exemptions for qualification. `probe:p0-07:config` checks the
-installed CLI against the development host version.
+`engines.dsh` and the DSH peer ranges admit the previously verified hosts and
+the DSH 0.2.2 series from rc.1 onward. Keep the upper bound below the next
+series, including its prereleases. This lets an update within the admitted
+series load the same package without a compatibility prompt. Admission covers
+the declared range. Release qualification records the exact hosts tested.
 
-Plugin 0.1.5 includes the verified rc.5 host contract. Release preparation
-follows [publishing](publishing.md); the development manifest remains private.
+Development dependencies target DSH 0.2.2-rc.1 and Cordis 4.1. The host adapter
+handles both Cordis 4.0 and 4.1 configuration hooks. The client coordinator
+normalizes composer send states before applying the meeting reference policy.
+Check admission and client and host integration before expanding the supported
+series. `probe:p0-07:config` checks the CLI against the development host version.
+
+Release preparation follows [publishing](publishing.md). The development
+manifest remains private.
 
 `src/index.ts` adapts DSH to `MeetingApplication`. The Repository stores meeting,
 transcript-version and audio facts. A RecordingSession owns one live recording,
@@ -91,8 +96,8 @@ Batch RUN v2 retains its physical-exit contract.
 ### Continuous integration
 
 [CI](https://github.com/huliux/dsh-asr-plugin/blob/main/.github/workflows/ci.yml)
-runs on pull requests to `main`, pushes to
-`main`, and manual dispatch. Its three checks are:
+runs on pull requests to `main`, pushes to `main`, and manual dispatch. Its
+three checks are:
 
 - **Typecheck and tests**: on macOS ARM64 with Node.js 24 and the manifest's
   pnpm version, install the frozen lockfile, generate assets, then run `check`.
@@ -100,7 +105,15 @@ runs on pull requests to `main`, pushes to
 - **Native build and package**: on macOS ARM64 with Node.js 24.18.0 and Xcode
   26.0.1, verify the qualified clang/SDK, build the complete package, independently
   rebuild FBank, run the built-plugin and Helper integration suites, and verify
-  public archive preparation. Pinned native hashes remain enforced.
+  public archive preparation. The job then installs the archive under the npm
+  `latest` DSH host in an isolated profile and checks authenticated recording
+  RPC, meeting references, tool approval, and missing-model behavior. Pinned
+  native hashes remain enforced.
+
+The native package job also runs weekly against the current DSH release. A
+failed run flags the host version or integration for maintainer review. The
+same probe can be run locally against a chosen CLI with
+`P1B_DSH_BIN=/absolute/path/to/dsh node scripts/probe-dsh-recording-rpc.mjs /absolute/path/to/package.tgz --tools`.
 
 Actions are pinned to commit SHAs. Jobs have read-only repository permissions,
 do not persist checkout credentials, and use isolated temporary `DSH_HOME`

@@ -11,12 +11,13 @@ Use the DSH Plugins page, or install the documented stable version into your
 chosen Web profile:
 
 ```sh
-dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.5
+dsh plugin --profile web add --ignore-scripts @huliux/dsh-asr-plugin@0.1.6
 ```
 
-Plugin 0.1.5 supports DSH 0.2.0-rc.2, 0.2.1-rc.2, 0.2.1-rc.3 and 0.2.1-rc.5. To update the desktop
-profile, choose **Add plugin** in the app and enter
-`@huliux/dsh-asr-plugin@0.1.5`. Web users can rerun the command above.
+Plugin 0.1.6 supports DSH 0.2.0-rc.2, 0.2.1-rc.2, 0.2.1-rc.3, 0.2.1-rc.5,
+and the 0.2.2 series from rc.1. Later 0.2.2 releases can use the same package.
+To update the desktop profile, choose **Add plugin** in the app and enter
+`@huliux/dsh-asr-plugin@0.1.6`. Web users can rerun the command above.
 Restart if requested; the supported versions require no compatibility exemption.
 If the desktop installer reports that the package is already installed, use the
 verified versioned archive from [GitHub package downloads](#github-package-downloads)
@@ -43,8 +44,8 @@ the same qualified `.tgz` uploaded to npm, with `SHA256SUMS` and release notes.
 Choose an attached package archive. GitHub's automatic source ZIP/tar downloads
 require the [complete build](development.md); they omit compiled recording assets.
 
-Download the [0.1.5 package](https://github.com/huliux/dsh-asr-plugin/releases/download/v0.1.5/huliux-dsh-asr-plugin-0.1.5.tgz)
-and [SHA256SUMS](https://github.com/huliux/dsh-asr-plugin/releases/download/v0.1.5/SHA256SUMS)
+Download the [0.1.6 package](https://github.com/huliux/dsh-asr-plugin/releases/download/v0.1.6/huliux-dsh-asr-plugin-0.1.6.tgz)
+and [SHA256SUMS](https://github.com/huliux/dsh-asr-plugin/releases/download/v0.1.6/SHA256SUMS)
 into one directory, verify them, and install the absolute
 local archive path into your selected profile:
 
