@@ -39,7 +39,7 @@ async function value(name, args) {
 const session = Session.create(SessionId("model-mode-probe"));
 session.append("turn/start", { turn: 1 });
 const agent = {
-  id: session.id, options: {}, session, inbox: {}, status: "running",
+  id: session.id, options: {}, session, inbox: { nextStep: [] }, status: "running",
   send() {}, followup() {}, inject() {}, cancel() {},
   runMaintenance: (job) => job(new AbortController().signal), whenIdle: () => Promise.resolve(),
 };
