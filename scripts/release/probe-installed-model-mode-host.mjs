@@ -1,4 +1,4 @@
-import { useInstalledHostModules } from "./installed-host-modules.mjs";
+import { executeInstalledHostTool, mountInstalledHostTools, useInstalledHostModules } from "./installed-host-modules.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -25,7 +25,7 @@ let playback;
 let phase = "setup";
 
 function call(name, args) {
-  return context.tools.execute({ agent, callId: `model-mode-${++sequence}`, name,
+  return executeInstalledHostTool(context, { agent, callId: `model-mode-${++sequence}`, name,
     arguments: args, signal: new AbortController().signal });
 }
 
@@ -39,7 +39,7 @@ async function value(name, args) {
 const session = Session.create(SessionId("model-mode-probe"));
 session.append("turn/start", { turn: 1 });
 const agent = {
-  id: session.id, options: {}, session, inbox: {}, status: "running",
+  id: session.id, options: {}, session, inbox: { nextStep: [] }, status: "running",
   send() {}, followup() {}, inject() {}, cancel() {},
   runMaintenance: (job) => job(new AbortController().signal), whenIdle: () => Promise.resolve(),
 };
@@ -128,7 +128,8 @@ async function recordMeeting() {
 }
 
 try {
-  for (const name of ["dsh-agent", "dsh-system-prompt", "dsh-tools", "dsh-user-approval",
+  await mountInstalledHostTools(context, loadHost);
+  for (const name of ["dsh-agent", "dsh-user-approval",
     "dsh-jobs-local", "dsh-subprocess-local"]) await context.plugin((await loadHost(name)).default);
   await context.plugin(ToolJobs, { completionDelivery: "quiet" });
   context.on("approval/request", () => Promise.resolve("allowed-once"));

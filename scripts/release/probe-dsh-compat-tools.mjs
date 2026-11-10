@@ -1,4 +1,4 @@
-import { useInstalledHostModules } from "./installed-host-modules.mjs";
+import { executeInstalledHostTool, mountInstalledHostTools, useInstalledHostModules } from "./installed-host-modules.mjs";
 import assert from "node:assert/strict";
 import { access, mkdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -37,7 +37,8 @@ async function seedMeeting() {
 async function createHost() {
   const context = new Context();
   try {
-    for (const name of ["dsh-agent", "dsh-system-prompt", "dsh-tools", "dsh-user-approval",
+    await mountInstalledHostTools(context, loadHost);
+    for (const name of ["dsh-agent", "dsh-user-approval",
       "dsh-jobs-local", "dsh-subprocess-local"]) {
       await context.plugin((await loadHost(name)).default);
     }
@@ -51,7 +52,7 @@ async function createHost() {
 }
 
 function call(host, name, args) {
-  return host.context.tools.execute({ agent: host.agent, callId: `compat-${++sequence}`,
+  return executeInstalledHostTool(host.context, { agent: host.agent, callId: `compat-${++sequence}`,
     name, arguments: args, signal: new AbortController().signal });
 }
 

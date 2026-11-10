@@ -11,6 +11,7 @@ import {
   type AutoReferenceMode,
   type AutoReferenceReduction,
   type AutoReferenceRuntimeState,
+  type MeetingInputPhase,
 } from "./meeting-reference-auto-state.js";
 import {
   formatMeetingReference,
@@ -23,6 +24,10 @@ const STORAGE_PREFIX = "dsh-asr:meeting-reference:";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 type SessionInput = ReturnType<ClientContext["conversation"]["input"]["for"]>;
+
+function normalizeInputPhase(phase: ReturnType<SessionInput["state"]["getSnapshot"]>["phase"]): MeetingInputPhase {
+  return phase === "sending" ? "submitting" : phase;
+}
 
 interface PersistedReferenceState {
   readonly meetingId: string;
@@ -198,7 +203,7 @@ export class MeetingReferenceCoordinator {
     const snapshot = input.state.getSnapshot();
     const reduction = reduceAutoReference(null, {
       type: "restore",
-      inputPhase: snapshot.phase,
+      inputPhase: normalizeInputPhase(snapshot.phase),
       meetingId: persisted.meetingId,
       mode: persisted.mode,
       present: hasReference(input, persisted.meetingId),
@@ -222,7 +227,7 @@ export class MeetingReferenceCoordinator {
     const snapshot = tracker.input.state.getSnapshot();
     const reduction = reduceAutoReference(tracker.state, {
       type: "observe",
-      inputPhase: snapshot.phase,
+      inputPhase: normalizeInputPhase(snapshot.phase),
       present: hasReference(tracker.input, tracker.state.meetingId),
       selfMutation: tracker.selfMutation,
     });

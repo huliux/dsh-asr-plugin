@@ -6,6 +6,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '37 3 * * 1'
 
 permissions:
   contents: read
@@ -21,6 +23,7 @@ defaults:
 jobs:
   checks:
     name: Typecheck and tests
+    if: github.event_name != 'schedule'
     runs-on: macos-26
     timeout-minutes: 20
     steps:
@@ -50,6 +53,7 @@ jobs:
 
   site:
     name: Site and links
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -108,10 +112,17 @@ jobs:
           tests/integration/plugin-assembly.spec.ts
           tests/integration/meeting-tools.spec.ts
       - name: Test the staging Helper and native protocols
+        if: github.event_name != 'schedule'
         run: |
           mkdir -p data/release-staging/recording-helper
           pnpm run probe:native:recording-helper
       - name: Verify public archive preparation without publishing
         run: pnpm run pack:release --version "$(node -p "require('./package.json').version")" --output "$RUNNER_TEMP/package-check"
+      - name: Check the archive against the current DSH release
+        run: |
+          runtime="$RUNNER_TEMP/dsh-compat-runtime"
+          npm install --prefix "$runtime" --ignore-scripts --no-audit --no-fund @deepseek-ai/dsh@latest
+          P1B_DSH_BIN="$runtime/node_modules/.bin/dsh" \
+            node scripts/probe-dsh-recording-rpc.mjs "$RUNNER_TEMP/package-check/"*.tgz --tools
       - name: Check tracked source
         run: git diff --exit-code

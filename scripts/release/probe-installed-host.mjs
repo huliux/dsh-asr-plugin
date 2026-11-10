@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
-import { useInstalledHostModules } from "./installed-host-modules.mjs";
+import { executeInstalledHostTool, mountInstalledHostTools, useInstalledHostModules } from "./installed-host-modules.mjs";
 
 const hostEntry = process.env.P1B_DSH_HOST_ENTRY;
 if (!hostEntry) throw new Error("missing P1B_DSH_HOST_ENTRY");
@@ -20,10 +20,8 @@ const { default: LocalJobRegistry } = await loadHost("dsh-jobs-local");
 const { Session, SessionId } = await loadHost("dsh-session");
 const { default: LocalSpillStore } = await loadHost("dsh-spill-local");
 const SpillPolicy = await loadHost("dsh-spill-policy");
-const { default: SystemPrompt } = await loadHost("dsh-system-prompt");
 const { default: LocalSubprocessRuntime } = await loadHost("dsh-subprocess-local");
 const ToolJobs = await loadHost("dsh-tool-jobs");
-const { default: ToolRuntime } = await loadHost("dsh-tools");
 const { default: ApprovalService } = await loadHost("dsh-user-approval");
 const plugin = await import("@huliux/dsh-asr-plugin");
 
@@ -138,9 +136,8 @@ function probeAgent(context) {
 
 async function createHost(dataRoot) {
   const context = new Context();
+  await mountInstalledHostTools(context, loadHost);
   await context.plugin(AgentRegistry);
-  await context.plugin(SystemPrompt);
-  await context.plugin(ToolRuntime);
   await context.plugin(LocalSpillStore, { root: join(dataRoot, "probe-spill"), cleanupPeriodDays: 0 });
   await context.plugin(SpillPolicy, { maxInlineBytes: 50_000 });
   await context.plugin(ApprovalService);
@@ -161,7 +158,7 @@ async function disposeHost(host) {
 
 function callTool(host, name, arguments_) {
   callSequence += 1;
-  return host.context.tools.execute({
+  return executeInstalledHostTool(host.context, {
     agent: host.agent,
     callId: `p1b-installed-${callSequence}`,
     name,

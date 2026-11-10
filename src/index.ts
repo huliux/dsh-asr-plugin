@@ -4,7 +4,7 @@ import { chmod, mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { Context, FiberState } from "@deepseek-ai/cordis";
+import type { Context } from "@deepseek-ai/cordis";
 import { dshHomePath, expandHomePath } from "@deepseek-ai/dsh-home-paths";
 import z from "@deepseek-ai/schemastery";
 
@@ -16,6 +16,7 @@ import { resolveConfiguredRuntimeAssets, resolveRuntimeAssets } from "./assets/r
 import type { ResolvedRuntimeAssets } from "./assets/runtime-assets.js";
 import { fingerprintAssetManifest } from "./assets/verify-assets.js";
 import { createDshRecordingHelperSignatureInspector } from "./assets/recording-helper-signature.js";
+import { refreshSettingsOnActivation, registerConfigUpdates } from "./host/cordis-config.js";
 import { createProductRecordingFactories } from "./recording/product-factories.js";
 import { RecordingModelWorker } from "./recording/model-worker.js";
 import { registerRecordingHostRpc } from "./recording/host-rpc.js";
@@ -45,7 +46,6 @@ export const inject = ["tools", "jobs", "subprocess"];
 const DEFAULT_DATA_DIRECTORY = dshHomePath("dsh-asr-plugin");
 const PACKAGE_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const MANIFEST_PATH = fileURLToPath(new URL("./assets/manifest.json", import.meta.url));
-const ACTIVE_FIBER_STATE = 2 satisfies FiberState;
 
 export interface Config {
   readonly data_dir?: string;
@@ -201,20 +201,8 @@ function createRuntimePreparer(context: Context, paths: RuntimePaths, models: Re
   };
 }
 
-function refreshSettings(context: Context): void {
-  try {
-    context.get("settings")?.describe({ redactSecrets: true });
-  } catch {
-    context.logger("dsh-asr").warn("SETTINGS_REFRESH_FAILED");
-  }
-}
-
 export async function apply(context: Context, config: ParsedConfig): Promise<void> {
-  context.on("internal/status", fiber => {
-    if (fiber === context.fiber && fiber.state === ACTIVE_FIBER_STATE) {
-      refreshSettings(context);
-    }
-  });
+  refreshSettingsOnActivation(context);
   const paths = resolveRuntimePaths(config);
   const lifetime: HostLifetime = {
     downloads: undefined,
@@ -255,10 +243,7 @@ export async function apply(context: Context, config: ParsedConfig): Promise<voi
       repository,
     });
     lifetime.application = application;
-    context.on("internal/update", (nextConfig: ParsedConfig, _noSave, next: () => void | Promise<void>) => {
-      if (resolveRuntimePaths(nextConfig).dataRoot !== paths.dataRoot) return next();
-      context.fiber.config = nextConfig;
-    });
+    registerConfigUpdates<ParsedConfig>(context, next => resolveRuntimePaths(next).dataRoot !== paths.dataRoot);
     context.effect(() => () => disposeHost(lifetime), "dsh-asr: application lifecycle");
     const reconciliation = await application.reconcileStartup();
     logReconciliation(context, reconciliation);

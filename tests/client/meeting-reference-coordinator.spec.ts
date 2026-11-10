@@ -78,7 +78,7 @@ function inputHarness() {
     draft: "",
     draftRev: 0,
     occurrences: [] as Array<{ source: string; ref: string }>,
-    phase: "plain" as "plain" | "submitting",
+    phase: "plain" as "plain" | "submitting" | "sending",
   };
   const listeners = new Set<() => void>();
   const publish = (next: Partial<typeof snapshot>) => {
@@ -109,7 +109,7 @@ function inputHarness() {
   };
 }
 
-it("闭合录音自动加入、发送补回、删除抑制、@加入恢复与终态清理", async () => {
+it.each(["submitting", "sending"] as const)("闭合录音自动加入、发送补回、删除抑制、@加入恢复与终态清理 (%s)", async (sendPhase) => {
   const storage = new TestStorage();
   const harness = inputHarness();
   const scope = {};
@@ -144,7 +144,7 @@ it("闭合录音自动加入、发送补回、删除抑制、@加入恢复与终
   expect(storage.getItem("dsh-asr:meeting-reference:session-1"))
     .toBe(`{"meeting_id":"${MEETING_ID}","mode":"auto"}`);
 
-  harness.publish({ phase: "submitting" });
+  harness.publish({ phase: sendPhase });
   harness.publish({ draft: "", draftRev: 2, occurrences: [], phase: "plain" });
   await vi.waitFor(() => expect(harness.snapshot().occurrences).toHaveLength(1));
 
