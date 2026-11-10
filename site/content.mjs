@@ -11,7 +11,7 @@ export const locales = {
   'zh-CN': {
     prefix: 'zh-CN/', other: '', otherLabel: 'English', skip: '跳至正文',
     tagline: 'DeepSeek Harness 非官方插件',
-    nav: { index: '介绍', start: '快速开始', guide: '使用案例', faq: '常见问题' },
+    nav: { index: '介绍', start: '快速开始', guide: '使用案例', faq: '常见问题', compare: '对比' },
     footer: `由 <a href="https://github.com/huliux">huliux</a> 维护 · Apache-2.0<br><a href="${repo}/issues">问题反馈</a> · <a href="mailto:dasenrising@gmail.com">联系作者</a> · ${source('SECURITY.md', '安全报告')}`,
     pages: {
       index: {
@@ -92,13 +92,25 @@ ${image('meeting-summary', '引用已完成的会议后，聊天显示决定与�
 <h2>转写速度和准确率怎样？</h2><p>表现取决于设备、音频长度、噪声和说话条件。本项目没有发布通用准确率基准；演示截图不能代表所有会议的识别效果。</p>
 <h2>更新会影响会议数据吗？</h2><p>替换包时保留已有会议和模型数据。同一数据目录只运行一个插件宿主，默认桌面和 Web 配置共享存储。具体安装路径和校验方法见 ${source('docs/distribution.md', '分发文档')}。</p>
 <h2>在哪里反馈问题？</h2><p>使用 <a href="${repo}/issues">GitHub Issues</a>，附插件、DSH、Node.js 和 macOS 版本及不含会议内容的诊断信息。合作或私密咨询可邮件联系 <a href="mailto:dasenrising@gmail.com">dasenrising@gmail.com</a>；漏洞请遵循 ${source('SECURITY.md', '安全报告流程')}。</p>`
+      },
+      compare: {
+        title: '本地转写，还是云端服务？',
+        description: '比较在 Mac 本地转写会议和把音频交给云端服务两种做法：音频去哪、要不要会议机器人、离线后能不能用，以及怎么在 DSH 里直接出总结和行动项。',
+        body: `<p>会议转写有两种做法：音频留在本机处理，或者上传到云端服务。本页比较这两种做法，帮你判断哪一种适合你。</p>
+<h2>音频去哪了</h2><p>用 dsh-asr-plugin，模型准备好后，音频推理在本机进行，不经过云端语音识别服务。录音文件和转写草稿保存在本机。需要在线模型阅读或总结会议时，只有被引用的转写文本会发给 DSH 里配置的模型提供商。</p><p>云端转写服务通常要把音频上传到它们的服务器处理，有的还要派一个会议机器人加入会议才能录音。转写完成后，一般还要在它们的网页或应用里查看和整理。</p>
+<h2>录音方式有什么不同</h2><p>这个插件直接录本机的麦克风和系统音频，不用往会议里加机器人，也不用改会议链接。云端服务有的靠机器人参会录音，有的靠上传录音文件，方式取决于具体产品。</p>
+<h2>断网后还能用吗</h2><p>模型下载好之后，录音和转写可以在本机离线完成；总结和行动项需要在线模型，所以那一步要联网。云端服务全程都需要网络。</p>
+<h2>怎么出总结和行动项</h2><p>这个插件的特点在 DSH 里：录音时用 <code>@</code> 引用正在进行的会议，就能拿到阶段性总结；录完后用同一引用提取决定、行动项、负责人和待确认问题，不用把转写复制到别的窗口。云端服务通常在自家的应用里做会后整理，再把结果同步或导出给你。</p>
+<h2>什么时候适合本地转写</h2><ul><li>会议内容比较敏感，不想把音频交给第三方服务。</li><li>用的已经是 Apple Silicon Mac 和 DSH，想在聊天里直接出总结。</li><li>不想再为转写单独付一份订阅，也不想往会议里加机器人。</li></ul>
+<p>如果团队用的不是 Mac，或者会议主要在 Windows、Linux 上开，这个插件目前并不适用，云端服务可能是更现实的选择。</p>
+<p><a href="start.html">安装与第一次转写</a> · <a href="guide.html">使用案例</a></p>`
       }
     }
   },
   en: {
     prefix: '', other: 'zh-CN/', otherLabel: '简体中文', skip: 'Skip to content',
     tagline: 'Unofficial DeepSeek Harness plugin',
-    nav: { index: 'About', start: 'Get started', guide: 'Workflows', faq: 'FAQ' },
+    nav: { index: 'About', start: 'Get started', guide: 'Workflows', faq: 'FAQ', compare: 'Compare' },
     footer: `Maintained by <a href="https://github.com/huliux">huliux</a> · Apache-2.0<br><a href="${repo}/issues">Report an issue</a> · <a href="mailto:dasenrising@gmail.com">Contact</a> · ${source('SECURITY.md', 'Security reports')}`,
     pages: {
       index: {
@@ -170,6 +182,18 @@ ${image('meeting-summary', 'DSH summarizes decisions and action items from a com
 <h2>How fast and accurate is transcription?</h2><p>Results depend on hardware, duration, noise and speech conditions. No general accuracy benchmark is reported. Demo screenshots do not establish performance for other meetings.</p>
 <h2>What should I preserve during an update?</h2><p>Preserve meeting and model data when replacing a package. Run one plugin host per data directory; Desktop and Web profiles share the default store. See ${source('docs/distribution.md', 'distribution')} for installation and verification.</p>
 <h2>Where can I ask for help?</h2><p>Use <a href="${repo}/issues">GitHub Issues</a> with plugin, DSH, Node.js and macOS versions and content-free diagnostics. Contact <a href="mailto:dasenrising@gmail.com">dasenrising@gmail.com</a> for private inquiries or collaboration. Follow ${source('SECURITY.md', 'the security policy')} for vulnerabilities.</p>`
+      },
+      compare: {
+        title: 'Local transcription or a cloud service?',
+        description: 'Compare transcribing meetings locally on your Mac with sending audio to a cloud service: where audio goes, whether a meeting bot is needed, offline use, and how summaries and action items work inside DSH.',
+        body: `<p>Meeting transcription comes in two shapes: audio processed on your machine, or audio sent to a cloud service. This page compares the two so you can decide which fits.</p>
+<h2>Where does the audio go?</h2><p>With dsh-asr-plugin, audio inference runs locally after model preparation, with no cloud speech-recognition service in between. Recordings and transcript drafts stay on your Mac. When an online model reads or summarizes a meeting, only the referenced transcript text goes to the provider configured in DSH.</p><p>Cloud transcription services usually upload audio to their servers for processing, and some send a meeting bot to join the call to record it. After transcription, results are typically reviewed and organized in their own web app.</p>
+<h2>How is recording different?</h2><p>This plugin records the Mac microphone and system audio directly — no bot joins the meeting and no meeting link changes. Cloud services vary by product: some record through a participant bot, others work from an uploaded recording.</p>
+<h2>Does it work offline?</h2><p>Once models are downloaded, recording and transcription run locally without a connection. Summaries and action items need the configured online model, so that step needs network access. Cloud services need a connection throughout.</p>
+<h2>How do summaries and action items work?</h2><p>The difference is inside DSH: while recording, <code>@</code>-reference the meeting in progress for an interim summary; after recording, use the same reference to extract decisions, action items, owners and open questions — no copying transcripts into another window. Cloud services usually organize the post-meeting follow-up in their own app and sync or export the result to you.</p>
+<h2>When does local transcription fit?</h2><ul><li>Meeting content is sensitive and you prefer not to hand audio to a third-party service.</li><li>You already use an Apple Silicon Mac and DSH, and want summaries in the same chat.</li><li>You would rather not pay a separate transcription subscription or add a bot to meetings.</li></ul>
+<p>If your team is not on Macs, or meetings mostly happen on Windows or Linux, this plugin does not fit today and a cloud service is the more practical choice.</p>
+<p><a href="start.html">Install and transcribe your first meeting</a> · <a href="guide.html">Recording and summary workflows</a></p>`
       }
     }
   }
