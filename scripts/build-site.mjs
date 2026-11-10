@@ -18,6 +18,8 @@ await mkdir(resolve(output, 'zh-CN'));
 const { version } = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
 const base = 'https://huliux.github.io/dsh-asr-plugin/';
 const escape = (text) => text.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+const jsonEscape = (text) => text.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+const buildDate = new Date().toISOString().slice(0, 10);
 const route = (key) => key === 'index' ? '' : `${key}.html`;
 const generated = [];
 const siteUrls = [];
@@ -50,6 +52,12 @@ ${key === 'index' && locale.prefix === '' ? `<meta name="google-site-verificatio
 <meta property="og:url" content="${url}">
 <meta property="og:image" content="${base}assets/recording-live-summary.jpg">
 <meta property="og:locale" content="${language === 'en' ? 'en_US' : 'zh_CN'}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${escape(page.title)} · dsh-asr-plugin">
+<meta name="twitter:description" content="${escape(page.description)}">
+<meta name="twitter:image" content="${base}assets/recording-live-summary.jpg">
+<link rel="icon" href="${rootPath}favicon.svg" type="image/svg+xml">
+${key === 'index' ? `<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"dsh-asr-plugin","applicationCategory":"MultimediaApplication","operatingSystem":"macOS","softwareVersion":"${version}","url":"${base}","description":"${jsonEscape(page.description)}","author":{"@type":"Person","name":"huliux","url":"https://github.com/huliux"},"license":"https://www.apache.org/licenses/LICENSE-2.0","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"isAccessibleForFree":true}</script>` : ''}
 <link rel="stylesheet" href="${rootPath}style.css">
 <script src="${rootPath}copy.js" defer></script>
 </head>
@@ -84,9 +92,11 @@ for (const key of Object.keys(locales.en.pages)) {
 }
 
 for (const name of ['style.css', 'copy.js']) await copyFile(resolve(root, 'site', name), resolve(output, name));
+await copyFile(resolve(root, 'site', 'favicon.svg'), resolve(output, 'favicon.svg'));
 for (const name of screenshots) await copyFile(resolve(root, 'assets/screenshots', `${name}.jpg`), resolve(output, 'assets', `${name}.jpg`));
 await writeFile(resolve(output, '.nojekyll'), '');
-await writeFile(resolve(output, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${siteUrls.map((url) => `  <url><loc>${url}</loc></url>`).join('\n')}\n</urlset>\n`);
+await writeFile(resolve(output, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${siteUrls.map((url) => `  <url><loc>${url}</loc><lastmod>${buildDate}</lastmod></url>`).join('\n')}\n</urlset>\n`);
+await writeFile(resolve(output, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${base}sitemap.xml\n`);
 
 // Check the public output boundary, including language links and image targets.
 for (const { path, html } of generated) {
