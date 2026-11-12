@@ -107,5 +107,7 @@ it("accepts a parakeet model pack manifest", () => {
     ],
   };
   const parsed = parseModelPackManifest(Buffer.from(JSON.stringify(contents)), manifest);
+  expect(parsed.schemaVersion).toBe(2);
+  if (parsed.schemaVersion !== 2) throw new Error("expected schemaVersion 2");
   expect(parsed.packKind).toBe("parakeet");
 });
