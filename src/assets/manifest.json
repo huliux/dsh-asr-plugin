@@ -90,6 +90,34 @@
         "nodeMajor": 24,
         "napi": 10
       }
+    },
+    {
+      "id": "parakeet-encoder",
+      "kind": "model",
+      "relativePath": "models/parakeet/encoder.int8.onnx",
+      "byteLength": 652282294,
+      "sha256": "1afbe69c1ffdabee94755f42e4daf1d93549131a3da11356bda84fcef0f2c479"
+    },
+    {
+      "id": "parakeet-decoder",
+      "kind": "model",
+      "relativePath": "models/parakeet/decoder.int8.onnx",
+      "byteLength": 11845274,
+      "sha256": "0222a86147299d4dee90edf95b6d13827edb42ad8b7c9cf0b2582f030937c0b5"
+    },
+    {
+      "id": "parakeet-joiner",
+      "kind": "model",
+      "relativePath": "models/parakeet/joiner.int8.onnx",
+      "byteLength": 6355277,
+      "sha256": "cbd02f3696e9944970111fb439d9c3fd365a80374565f13f2b9c7007d253fc98"
+    },
+    {
+      "id": "parakeet-tokens",
+      "kind": "tokens",
+      "relativePath": "models/parakeet/tokens.txt",
+      "byteLength": 93939,
+      "sha256": "d58544679ea4bc6ac563d1f545eb7d474bd6cfa467f0a6e2c1dc1c7d37e3c35d"
     }
   ]
 }

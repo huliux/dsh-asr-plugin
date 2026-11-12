@@ -64,6 +64,15 @@ The project itself is licensed under Apache-2.0; the full text is in `LICENSE`.
 - Distribution: `public`.
 - Attribution: Bitbook wrapper Copyright (c) 2024 Max Bain; fastcluster from cdalitz/hclust-cpp@d48fff6bba1199d80422cd37f5b635107a5a0c92, Copyright 2011 Daniel Müllner and 2018-2020 Christoph Dalitz; node-addon-api MIT headers; stderr fallback modified.
 
+## huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8 — parakeet-encoder, parakeet-decoder, parakeet-joiner, parakeet-tokens
+
+- Fixed source: [repository](https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8) at `ed5d745623472f97cfc2e6c2916ee248798fc5a8`.
+- Source files: `encoder.int8.onnx`, `decoder.int8.onnx`, `joiner.int8.onnx`, `tokens.txt`.
+- License: [`CC-BY-4.0`](https://creativecommons.org/licenses/by/4.0/legalcode).
+- License material: `third_party/licenses/CC-BY-4.0.md`.
+- Distribution: `public`.
+- Attribution: NVIDIA Parakeet TDT 0.6B v3 multilingual speech recognition model; ONNX int8 export by csukuangfj for sherpa-onnx; model bytes unchanged and repackaged.
+
 ## onnxruntime-node@1.19.2
 
 - Fixed source: [repository](https://github.com/microsoft/onnxruntime) at `ffceed9d44f2f3efb9dd69fa75fea51163c91d91`.

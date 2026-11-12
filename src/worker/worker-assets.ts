@@ -21,7 +21,7 @@ export async function loadWorkerAssets(
   const processing = config.processing;
   if (processing !== undefined) {
     const expected = createProcessingIdentity(await readAssetManifest(config.manifestPath),
-      engineFingerprint, processing.identity.mode);
+      engineFingerprint, processing.identity.mode, processing.identity.engine);
     if (Object.entries(expected).some(([key, value]) =>
       processing.identity[key as keyof typeof expected] !== value)) {
       throw new WorkerRuntimeError("ASSET_MISMATCH", "Worker processing identity changed");

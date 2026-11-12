@@ -1,7 +1,7 @@
 # Model assets
 
 The base set contains fixed VAD, ASR, speaker embedding and support files; the
-optional set adds punctuation. src/assets/manifest.json defines exact bytes and
+optional sets add punctuation and the English/European recognizer. src/assets/manifest.json defines exact bytes and
 SHA-256. src/assets/supply-chain.json records canonical upstream repositories,
 immutable revisions and license terms. Keep weights out of Git/npm code bundles.
 
@@ -13,6 +13,23 @@ for new tasks after verified installation. Download progress, verification, inst
 cancellation and retry are shown in the page. Models come directly from pinned
 ModelScope/Hugging Face sources; GitHub Releases do not host model weights.
 The downloader verifies each asset and uses the same atomic staging contract below.
+
+## Recognizer families
+
+`asr_engine` chooses the recognizer family for new tasks:
+
+- `paraformer` (default) — Mandarin Paraformer-large, about 278 MiB, with the
+  optional punctuation pack (about 274 MiB).
+- `parakeet` — NVIDIA Parakeet TDT 0.6B v3 int8, about 640 MiB, covering English
+  and 24 further European languages. The model emits punctuation and casing
+  itself, so this engine runs the punctuated block path without a punctuation
+  pack.
+
+VAD, speaker embedding and clustering are shared because they are
+language-agnostic. Only the selected family's assets are required: a missing
+Parakeet pack never blocks Paraformer and vice versa. The engine is part of the
+processing identity, so switching families does not reuse cached drafts;
+committed transcripts keep the engine fingerprint they were produced with.
 
 ## Developer and offline preparation
 
@@ -43,6 +60,7 @@ Developers can collect the fixed upstream files in modelRoot and build archives:
 ```sh
 pnpm run build:model-pack -- /path/to/base.tar /path/to/modelRoot --pack base
 pnpm run build:model-pack -- /path/to/punctuation.tar /path/to/modelRoot --pack punctuation
+pnpm run build:model-pack -- /path/to/parakeet.tar /path/to/modelRoot --pack parakeet
 ```
 
 This command rebuilds ordinary dist; run the complete native/Helper build before

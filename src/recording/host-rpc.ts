@@ -146,7 +146,8 @@ export function registerRecordingHostRpc(
         if (endpoint === "models/download/start") {
           const value = record(payload);
           if (value === null || !exact(value, ["pack"]) ||
-            (value.pack !== "base" && value.pack !== "punctuation")) inputError();
+            (value.pack !== "base" && value.pack !== "parakeet" &&
+            value.pack !== "punctuation")) inputError();
           return { ok: true, value: await downloads.start(value.pack) };
         }
         emptyPayload(payload);

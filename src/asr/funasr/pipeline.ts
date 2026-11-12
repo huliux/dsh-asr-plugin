@@ -11,11 +11,21 @@ const MAX_CHUNKS = 20_000;
 const MAX_BLOCKS = 20_000;
 const TIMESTAMP_END_TOLERANCE_MS = 40;
 
+export interface FunAsrChunkPunctuation {
+  readonly ids: readonly number[];
+  readonly list: readonly string[];
+}
+
 export interface FunAsrChunkDraft {
   readonly featureFrames: number;
   readonly frontendMs: number;
   readonly inferenceMs: number;
   readonly puncInput: string;
+  /**
+   * Punctuation decided by the recognizer itself. Self-punctuating engines set
+   * this and the pipeline then skips the separate punctuator.
+   */
+  readonly punctuation?: FunAsrChunkPunctuation | undefined;
   readonly rawText: string;
   readonly timestampsMs: readonly (readonly [number, number])[] | null;
   readonly tokenCount: number;
@@ -40,7 +50,8 @@ export interface FunAsrPunctuator {
 }
 
 export interface FunAsrRuntimeFactory {
-  loadPunctuator(): Promise<FunAsrPunctuator>;
+  /** Absent for recognizers that decide punctuation themselves. */
+  loadPunctuator?: (() => Promise<FunAsrPunctuator>) | undefined;
   loadRecognizer(): Promise<FunAsrRecognizer>;
 }
 
@@ -279,6 +290,34 @@ function chunkBlocks(
   );
 }
 
+function selfPunctuatedChunkBlocks(chunk: RecognizedChunk): Omit<FunAsrBlock, "seq">[] {
+  const punctuation = assertSelfPunctuation(chunk);
+  if (chunk.draft.timestampsMs === null) {
+    return [{ ...chunk.region, text: chunk.draft.rawText.trim() }];
+  }
+  return buildSentenceBlocks(
+    chunk.draft.tokens,
+    chunk.draft.timestampsMs,
+    punctuation.ids,
+    punctuation.list,
+    chunk.region.startMs,
+    chunk.region.endMs,
+  );
+}
+
+function selfPunctuated(chunks: readonly RecognizedChunk[]): boolean {
+  return chunks.every((chunk) => chunk.draft.punctuation !== undefined);
+}
+
+function assertSelfPunctuation(chunk: RecognizedChunk): FunAsrChunkPunctuation {
+  const punctuation = chunk.draft.punctuation;
+  if (punctuation === undefined || punctuation.ids.length !== chunk.draft.tokens.length ||
+    punctuation.list.length === 0 || punctuation.list[0] !== "_") {
+    throw inferenceFailure("Self-punctuated draft does not align");
+  }
+  return punctuation;
+}
+
 function assertPunctuation(
   chunk: RecognizedChunk,
   result: FunAsrPunctuationResult,
@@ -313,13 +352,57 @@ function chunkTokenUnits(
   );
 }
 
+function selfPunctuatedChunkUnits(chunk: RecognizedChunk): FunAsrTokenUnit[] {
+  const punctuation = assertSelfPunctuation(chunk);
+  if (chunk.draft.timestampsMs === null) {
+    throw inferenceFailure("FunASR token timestamps are unavailable for recording drafts");
+  }
+  return buildTokenUnits(
+    chunk.draft.tokens,
+    chunk.draft.timestampsMs,
+    punctuation.ids,
+    punctuation.list,
+    chunk.region.startMs,
+    chunk.region.endMs,
+  );
+}
+
+function selfPunctuatedUnits(chunks: readonly RecognizedChunk[]): FunAsrTokenUnit[] {
+  const units: FunAsrTokenUnit[] = [];
+  for (const chunk of chunks) {
+    units.push(...selfPunctuatedChunkUnits(chunk));
+    if (units.length > MAX_BLOCKS) {
+      throw new FunAsrError("RESOURCE_LIMIT", "Too many ASR tokens");
+    }
+  }
+  return units;
+}
+
+function selfPunctuatedBlocks(chunks: readonly RecognizedChunk[]): FunAsrBlock[] {
+  const blocks: FunAsrBlock[] = [];
+  for (const chunk of chunks) {
+    for (const block of selfPunctuatedChunkBlocks(chunk)) {
+      blocks.push({ ...block, seq: blocks.length });
+      if (blocks.length > MAX_BLOCKS) {
+        throw new FunAsrError("RESOURCE_LIMIT", "Too many ASR blocks");
+      }
+    }
+  }
+  return blocks;
+}
+
 async function punctuateChunks(
   chunks: readonly RecognizedChunk[],
   factory: FunAsrRuntimeFactory,
 ): Promise<{ blocks: FunAsrBlock[]; inferenceMs: number }> {
+  if (selfPunctuated(chunks)) return { blocks: selfPunctuatedBlocks(chunks), inferenceMs: 0 };
+  const loadPunctuator = factory.loadPunctuator;
+  if (loadPunctuator === undefined) {
+    throw new FunAsrError("MODEL_LOAD_FAILED", "Enhanced mode requires punctuation assets");
+  }
   let punctuator: FunAsrPunctuator;
   try {
-    punctuator = await factory.loadPunctuator();
+    punctuator = await loadPunctuator();
   } catch (error) {
     throw error instanceof FunAsrError
       ? error
@@ -368,9 +451,13 @@ async function punctuateDraftWithLoadedRuntime(
   let inferenceMs = 0;
   try {
     for (const chunk of chunks) {
-      const result = await punctuator.punctuate(chunk.draft.puncInput);
-      inferenceMs += result.inferenceMs;
-      units.push(...chunkTokenUnits(chunk, result, punctuator.punctuationList));
+      if (chunk.draft.punctuation !== undefined) {
+        units.push(...selfPunctuatedChunkUnits(chunk));
+      } else {
+        const result = await punctuator.punctuate(chunk.draft.puncInput);
+        inferenceMs += result.inferenceMs;
+        units.push(...chunkTokenUnits(chunk, result, punctuator.punctuationList));
+      }
       if (units.length > MAX_BLOCKS) throw new FunAsrError("RESOURCE_LIMIT", "Too many ASR tokens");
     }
   } catch (error) {
@@ -448,7 +535,9 @@ export async function runFunAsrWithLoadedRuntime(
   }
   const punctuated = runtime.mode === "base"
     ? { blocks: baseBlocks(recognized.chunks), inferenceMs: 0 }
-    : await punctuateWithLoadedRuntime(recognized.chunks, requirePunctuator(runtime));
+    : selfPunctuated(recognized.chunks)
+      ? { blocks: selfPunctuatedBlocks(recognized.chunks), inferenceMs: 0 }
+      : await punctuateWithLoadedRuntime(recognized.chunks, requirePunctuator(runtime));
   if (punctuated.blocks.length === 0) throw inferenceFailure("FunASR produced no sentence blocks");
   return {
     blocks: punctuated.blocks,
@@ -481,7 +570,9 @@ export async function runFunAsrDraftWithLoadedRuntime(
   }
   const punctuated = runtime.mode === "base"
     ? { units: baseTokenUnits(recognized.chunks), inferenceMs: 0 }
-    : await punctuateDraftWithLoadedRuntime(recognized.chunks, requirePunctuator(runtime));
+    : selfPunctuated(recognized.chunks)
+      ? { units: selfPunctuatedUnits(recognized.chunks), inferenceMs: 0 }
+      : await punctuateDraftWithLoadedRuntime(recognized.chunks, requirePunctuator(runtime));
   if (punctuated.units.length === 0) throw inferenceFailure("FunASR produced no token units");
   return {
     units: punctuated.units,

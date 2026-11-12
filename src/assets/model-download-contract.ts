@@ -1,4 +1,4 @@
-export type ModelDownloadPack = "base" | "punctuation";
+export type ModelDownloadPack = "base" | "parakeet" | "punctuation";
 export type ModelDownloadPhase = "idle" | "downloading" | "verifying" | "installing" | "completed" | "failed" | "cancelled";
 export interface ModelDownloadStatus {
   readonly pack: ModelDownloadPack | null;

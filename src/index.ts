@@ -12,11 +12,13 @@ import {
   MeetingApplication,
   type StartupReconciliationResult,
 } from "./application/meeting-application.js";
+import type { AsrEngine } from "./assets/processing-identity.js";
 import { resolveConfiguredRuntimeAssets, resolveRuntimeAssets } from "./assets/runtime-assets.js";
 import type { ResolvedRuntimeAssets } from "./assets/runtime-assets.js";
 import { fingerprintAssetManifest } from "./assets/verify-assets.js";
 import { createDshRecordingHelperSignatureInspector } from "./assets/recording-helper-signature.js";
-import { refreshSettingsOnActivation, registerConfigUpdates } from "./host/cordis-config.js";
+import { effectiveConfig, readVolatile, refreshSettingsOnActivation,
+  registerConfigUpdates } from "./host/cordis-config.js";
 import { createProductRecordingFactories } from "./recording/product-factories.js";
 import { RecordingModelWorker } from "./recording/model-worker.js";
 import { registerRecordingHostRpc } from "./recording/host-rpc.js";
@@ -48,6 +50,7 @@ const PACKAGE_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const MANIFEST_PATH = fileURLToPath(new URL("./assets/manifest.json", import.meta.url));
 
 export interface Config {
+  readonly asr_engine?: AsrEngine;
   readonly data_dir?: string;
   readonly punctuation_enabled?: boolean;
   readonly hf_download_route?: "default" | "direct" | "proxy";
@@ -56,6 +59,8 @@ export interface Config {
 }
 
 export const Config = z.object({
+  asr_engine: z.union(["paraformer", "parakeet"]).default("paraformer").volatile()
+    .description("Recognizer family; Paraformer covers Chinese, Parakeet covers 25 European languages"),
   punctuation_enabled: z.boolean().volatile().description("Legacy setting; punctuation is now selected from installed models"),
   hf_download_route: z.union(["default", "direct", "proxy"]).default("default").volatile()
     .description("Legacy route; downloads automatically select pinned sources"),
@@ -182,10 +187,18 @@ function runtimeAssetsResolver(dataRoot: string): () => Promise<ResolvedRuntimeA
   };
 }
 
-function createRuntimePreparer(context: Context, paths: RuntimePaths, models: RecordingModelWorker) {
+function selectedEngine(context: Context): AsrEngine {
+  return readVolatile<AsrEngine>(effectiveConfig<ParsedConfig>(context).asr_engine) ?? "paraformer";
+}
+
+function createRuntimePreparer(
+  context: Context,
+  paths: RuntimePaths,
+  models: RecordingModelWorker,
+) {
   return async (signal?: AbortSignal, purpose: "batch" | "recording" = "batch") => {
     const assets = await resolveConfiguredRuntimeAssets({
-      dataRoot: paths.dataRoot, packageRoot: PACKAGE_ROOT,
+      dataRoot: paths.dataRoot, packageRoot: PACKAGE_ROOT, engine: selectedEngine(context),
       ...(signal === undefined ? {} : { signal }),
     });
     const runtimeAssets = async () => assets;
@@ -250,16 +263,19 @@ export async function apply(context: Context, config: ParsedConfig): Promise<voi
     registerMeetingTools(context, application);
     const downloads = new ModelDownloadController({ dataRoot: paths.dataRoot, packageRoot: PACKAGE_ROOT,
       jobs: context.jobs, transport: context.subprocess, settings: () => {
-        const current = context.fiber.config as ParsedConfig;
-        return { route: current.hf_download_route.get(), proxyUrl: current.hf_proxy_url.get(),
-          proxyKind: current.hf_proxy_kind.get() ?? (current.hf_proxy_url.get().trim() ? "http" : "mirror") };
+        const current = effectiveConfig<ParsedConfig>(context);
+        const proxyUrl = readVolatile<string>(current.hf_proxy_url) ?? "";
+        return { route: readVolatile<"default" | "direct" | "proxy">(current.hf_download_route) ?? "default",
+          proxyUrl,
+          proxyKind: readVolatile<"mirror" | "http">(current.hf_proxy_kind) ??
+            (proxyUrl.trim() ? "http" : "mirror") };
       } });
     lifetime.downloads = downloads;
     context.inject(["connection", "webServer"], (webContext) => {
       const connection = recordingHttpConnection(webContext.connection, webContext.get("webServer") as RecordingWebServer);
       webContext.jobs.attachController("dsh-asr-recording-web");
       const removeRpc = registerRecordingHostRpc(connection, application, signal => readModelSettings(
-        { dataRoot: paths.dataRoot, packageRoot: PACKAGE_ROOT, signal },
+        { dataRoot: paths.dataRoot, packageRoot: PACKAGE_ROOT, engine: selectedEngine(context), signal },
       ), downloads, recording.permissions, signal => application.prepareRecording(signal));
       webContext.effect(() => removeRpc, "dsh-asr: recording client RPC");
     });

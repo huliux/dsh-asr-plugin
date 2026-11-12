@@ -26,11 +26,14 @@ export async function readModelStatus(rpc: ClientConnectionRpc, signal?: AbortSi
   const response = await callRecordingRpc(rpc, "models/status", {}, signal);
   if (!response.ok) throw new Error("MODEL_STATUS_FAILED");
   const item = record(response.value);
-  if ((item.mode !== "base" && item.mode !== "enhanced") ||
+  if ((item.engine !== "paraformer" && item.engine !== "parakeet") ||
+    (item.mode !== "base" && item.mode !== "enhanced") ||
     (item.preference !== null && typeof item.preference !== "boolean") ||
     typeof item.inheritedLegacy !== "boolean" || typeof item.selectedReady !== "boolean" ||
     typeof item.dataDirectory !== "string") throw new Error("INVALID_RESPONSE");
-  return { mode: item.mode, preference: item.preference, inheritedLegacy: item.inheritedLegacy,
+  return { engine: item.engine, mode: item.mode, preference: item.preference,
+    inheritedLegacy: item.inheritedLegacy,
     selectedReady: item.selectedReady, dataDirectory: item.dataDirectory,
-    base: group(item.base), punctuation: group(item.punctuation), native: group(item.native) };
+    base: group(item.base), parakeet: group(item.parakeet),
+    punctuation: group(item.punctuation), native: group(item.native) };
 }

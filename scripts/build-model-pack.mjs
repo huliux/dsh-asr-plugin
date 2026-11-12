@@ -12,8 +12,8 @@ const pack = packIndex === -1 ? undefined : arguments_[packIndex + 1];
 if (packIndex !== -1) arguments_.splice(packIndex, 2);
 
 if (arguments_.length < 1 || arguments_.length > 2 ||
-  (packIndex !== -1 && pack !== "base" && pack !== "punctuation")) {
-  process.stderr.write("usage: pnpm build:model-pack <output.tar> [model-root] [--pack base|punctuation]\n");
+  (packIndex !== -1 && pack !== "base" && pack !== "parakeet" && pack !== "punctuation")) {
+  process.stderr.write("usage: pnpm build:model-pack <output.tar> [model-root] [--pack base|parakeet|punctuation]\n");
   process.exitCode = 2;
 } else {
   try {

@@ -143,7 +143,7 @@ describe("DSH 插件基础装配", () => {
     expect(plugin.Config({ data_dir: "/isolated", punctuation_enabled: false }).punctuation_enabled.get()).toBe(false);
     expect(plugin.name).toBe("dsh-asr");
     expect(plugin.inject).toEqual(["tools", "jobs", "subprocess"]);
-    expect(Object.keys(plugin.Config.dict ?? {}).sort()).toEqual(["data_dir", "hf_download_route", "hf_proxy_kind", "hf_proxy_url", "punctuation_enabled"]);
+    expect(Object.keys(plugin.Config.dict ?? {}).sort()).toEqual(["asr_engine", "data_dir", "hf_download_route", "hf_proxy_kind", "hf_proxy_url", "punctuation_enabled"]);
   });
 
 
@@ -160,7 +160,7 @@ describe("DSH 插件基础装配", () => {
       expect(repository.getMeeting(LEASE_MEETING_ID)).toMatchObject({
         status: "processing", activeRunId: LEASE_RUN_ID, errorCode: null,
       });
-      expect(fiber.config.punctuation_enabled.get()).toBe(true);
+      expect((fiber.effectiveConfig as { punctuation_enabled: { get(): boolean } }).punctuation_enabled.get()).toBe(true);
       expect(meetingToolNames(context)).toEqual([...MEETING_TOOL_NAMES].sort());
     } finally { repository.close(); }
   });

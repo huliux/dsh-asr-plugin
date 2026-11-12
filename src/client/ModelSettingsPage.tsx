@@ -43,14 +43,14 @@ export function ModelInstructions({ t }: { status: ModelSettingsStatus; t: Model
 function ModelDiagnostics({ status, t }: { status: ModelSettingsStatus; t: ModelSettingsTranslate }) {
   const [open, setOpen] = useState(false);
   const [details, setDetails] = useState(false);
-  const issues = (["base", "punctuation", "native"] as const)
+  const issues = (["base", "parakeet", "punctuation", "native"] as const)
     .flatMap(key => status[key].issues.map(issue => ({ ...issue, group: key })));
   return <section className={styles.card} aria-label={t("diagnostics")}>
     <DisclosureRow icon={<IconInfoOutlineRegular />} title={t("diagnostics")} open={open} expandable expandOnRowClick
       onToggle={() => setOpen(value => !value)}>
     <p className={styles.description}>{t("diagnosticScope")}</p>
     <div className={styles.diagnosticGroups}>
-      {(["base", "punctuation", "native"] as const).map(key => <div key={key} className={styles.diagnosticGroup}>
+      {(["base", "parakeet", "punctuation", "native"] as const).map(key => <div key={key} className={styles.diagnosticGroup}>
         <div className={styles.modelTitle}><span className={styles.label}>{t(key)}</span>
           <StateDot state={status[key].state === "ready" ? "done" : key === "punctuation" && status.mode === "base" ? "idle" : "warning"} />
           <span>{t(status[key].state)}</span></div>

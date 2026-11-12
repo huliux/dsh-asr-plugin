@@ -115,9 +115,10 @@ it("只在 loopback UI channel 注册录音与 Meeting reference 四个 endpoint
 
 it("serves model status only through the existing loopback channel and rejects path overrides", async () => {
   let handler!: Parameters<RecordingRpcConnection["rpc"]["handle"]>[1];
-  const status = { mode: "base", preference: null, inheritedLegacy: false, selectedReady: false,
-    base: { state: "missing", issues: [] }, punctuation: { state: "missing", issues: [] },
-    native: { state: "ready", issues: [] }, dataDirectory: "/owned/data" } as const;
+  const status = { mode: "base", engine: "paraformer", preference: null, inheritedLegacy: false, selectedReady: false,
+    base: { state: "missing", issues: [] }, parakeet: { state: "missing", issues: [] },
+    punctuation: { state: "missing", issues: [] }, native: { state: "ready", issues: [] },
+    dataDirectory: "/owned/data" } as const;
   const readStatus = vi.fn(async () => status);
   registerRecordingHostRpc({ rpc: { handle: (_channel, value) => {
     handler = value; return async () => {};

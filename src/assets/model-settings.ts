@@ -14,15 +14,20 @@ function groupStatus(group: DoctorGroup): ModelGroupStatus {
 
 async function readModelSettingsWhileLeased(input: RuntimeAssetsInput): Promise<ModelSettingsStatus> {
   const report = await doctorRuntimeAssets(input);
+  const engine = input.engine ?? "paraformer";
   const mode = await configuredProcessingMode({
     manifest: await readAssetManifest(join(resolve(input.packageRoot), "dist/assets/manifest.json")),
     modelRoot: join(resolve(input.dataRoot), "assets", report.modelSetFingerprint),
     modelStoreRoot: join(resolve(input.dataRoot), "assets"),
-  });
+  }, engine);
+  const selectedReady = engine === "parakeet"
+    ? report.groups.parakeet.ready
+    : mode === "enhanced" ? report.enhancedReady : report.ready;
   return {
-    mode, preference: null, inheritedLegacy: false,
-    selectedReady: mode === "enhanced" ? report.enhancedReady : report.ready,
-    base: groupStatus(report.groups.base), punctuation: groupStatus(report.groups.punctuation),
+    engine, mode, preference: null, inheritedLegacy: false,
+    selectedReady,
+    base: groupStatus(report.groups.base), parakeet: groupStatus(report.groups.parakeet),
+    punctuation: groupStatus(report.groups.punctuation),
     native: groupStatus(report.groups.native), dataDirectory: resolve(input.dataRoot),
   };
 }

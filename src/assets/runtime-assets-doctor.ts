@@ -10,7 +10,7 @@ import {
 import { readSupplyChainManifest, SupplyChainError } from "./supply-chain.js";
 import type { SupplyChainDependency } from "./supply-chain.js";
 import { AssetVerificationError } from "./verify-assets.js";
-import { isPunctuationAsset, modelPackFingerprint } from "./model-pack.js";
+import { isParakeetAsset, isPunctuationAsset, modelPackFingerprint } from "./model-pack.js";
 import type { ModelPackKind } from "./model-pack.js";
 import type { AssetManifest, AssetRecord, AssetRuntime } from "./verify-assets.js";
 
@@ -215,6 +215,7 @@ function supplyChainFailureReport(
     ready: false,
     enhancedReady: false,
     groups: { base: { ready: false, checks: [], issues: [] },
+      parakeet: { ready: false, checks: [], issues: [] },
       punctuation: { ready: false, checks: [], issues: [] },
       native: { ready: false, checks: [], issues: [] } },
     modelSetFingerprint: layout.modelSetFingerprint,
@@ -255,14 +256,17 @@ async function doctorGroups(
 ): Promise<Record<ModelPackKind | "native", DoctorGroup>> {
   const groups = {
     base: { ready: true, checks: [], issues: [] } as DoctorGroup,
+    parakeet: { ready: true, checks: [], issues: [] } as DoctorGroup,
     punctuation: { ready: true, checks: [], issues: [] } as DoctorGroup,
     native: { ready: true, checks: [], issues: [] } as DoctorGroup,
   };
   const roots = { base: await modelGroupRoot(layout, "base"),
+    parakeet: await modelGroupRoot(layout, "parakeet"),
     punctuation: await modelGroupRoot(layout, "punctuation"), native: layout.packagedNativeRoot };
   for (const asset of layout.manifest.assets) {
     const kind = asset.kind === "native" ? "native" :
-      isPunctuationAsset(asset) ? "punctuation" : "base";
+      isParakeetAsset(asset) ? "parakeet" :
+        isPunctuationAsset(asset) ? "punctuation" : "base";
     const result = await doctorAsset(roots[kind], asset, runtime);
     groups[kind].checks.push(result.check);
     if (result.issue !== undefined) groups[kind].issues.push(result.issue);
@@ -290,7 +294,8 @@ export async function doctorResolvedRuntimeAssets(
     return supplyChainFailureReport(layout, runtime, error);
   }
   const groups = await doctorGroups(input.packageRoot, layout, supplyChain.dependencies[0], runtime);
-  const checks = [...groups.base.checks, ...groups.punctuation.checks, ...groups.native.checks];
+  const checks = [...groups.base.checks, ...groups.parakeet.checks,
+    ...groups.punctuation.checks, ...groups.native.checks];
   const issues = [...groups.base.issues, ...groups.native.issues];
   return {
     ready: issues.length === 0,

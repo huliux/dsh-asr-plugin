@@ -86,6 +86,35 @@ function fakeFactory(
 }
 
 describe("runFunAsr", () => {
+  it("uses model-supplied punctuation without loading a punctuator", async () => {
+    const events: string[] = [];
+    const selfPunctuated: FunAsrChunkDraft = {
+      ...draft("Ask not"),
+      tokens: ["Ask", "not"],
+      punctuation: { ids: [0, 2], list: ["_", "_", "."] },
+    };
+    const factory: FunAsrRuntimeFactory = {
+      async loadRecognizer() {
+        events.push("load-asr");
+        return { async close() { events.push("close-asr"); }, async recognize() { return selfPunctuated; } };
+      },
+    };
+    const result = await runFunAsr(virtualReader(5_000), [{ startMs: 0, endMs: 5_000 }], factory, "enhanced");
+    expect(result.blocks).toEqual([{ seq: 0, startMs: 0, endMs: 200, text: "Ask not." }]);
+    expect(result.metrics.punctuationInferenceMs).toBe(0);
+    expect(events).toEqual(["load-asr", "close-asr"]);
+  });
+
+  it("still refuses enhanced mode without punctuation when the engine is not self-punctuated", async () => {
+    const factory: FunAsrRuntimeFactory = {
+      async loadRecognizer() {
+        return { async close() {}, async recognize() { return draft(); } };
+      },
+    };
+    await expect(runFunAsr(virtualReader(5_000), [{ startMs: 0, endMs: 5_000 }], factory, "enhanced"))
+      .rejects.toThrow(/Enhanced mode requires punctuation assets/);
+  });
+
   it("processes base text without loading punctuation", async () => {
     const events: string[] = [];
     const result = await runFunAsr(
@@ -162,7 +191,7 @@ describe("runFunAsr", () => {
     const factory = fakeFactory(events);
     const runtime = {
       recognizer: await factory.loadRecognizer(),
-      punctuator: await factory.loadPunctuator(),
+      punctuator: await factory.loadPunctuator!(),
     };
 
     const result = await runFunAsrDraftWithLoadedRuntime(
@@ -182,7 +211,7 @@ describe("runFunAsr", () => {
     const factory = fakeFactory([], async () => ({ ...draft(), timestampsMs: null }));
     const runtime = {
       recognizer: await factory.loadRecognizer(),
-      punctuator: await factory.loadPunctuator(),
+      punctuator: await factory.loadPunctuator!(),
     };
 
     await expect(runFunAsrDraftWithLoadedRuntime(
@@ -197,7 +226,7 @@ describe("runFunAsr", () => {
     const factory = fakeFactory(events);
     const runtime = {
       recognizer: await factory.loadRecognizer(),
-      punctuator: await factory.loadPunctuator(),
+      punctuator: await factory.loadPunctuator!(),
     };
 
     await runFunAsrWithLoadedRuntime(

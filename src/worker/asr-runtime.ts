@@ -1,12 +1,12 @@
-import type { ProcessingMode } from "../assets/processing-identity.js";
+import type { AsrEngine, ProcessingMode } from "../assets/processing-identity.js";
 import { runBoundedVad } from "../asr/bounded-vad.js";
-import { createFunAsrRuntimeFactory } from "../asr/funasr/factory.js";
-import type {
-  FunAsrPunctuator,
-  FunAsrRecognizer,
-  FunAsrRuntimeFactory,
-} from "../asr/funasr/pipeline.js";
+import type { FunAsrPunctuator, FunAsrRecognizer, FunAsrRuntimeFactory } from "../asr/funasr/pipeline.js";
 import { runFunAsr } from "../asr/funasr/pipeline.js";
+import {
+  loadRecognitionEngine,
+  punctuationAssetIds,
+  recognitionAssetIds,
+} from "../asr/recognition.js";
 import { loadVadModel } from "../asr/vad-model.js";
 import type { LoadedVadModel } from "../asr/vad-model.js";
 import type { WorkerEntryConfig } from "./entry-config.js";
@@ -16,23 +16,25 @@ import type { AsrResultPayload, AsrRunMessage } from "./types.js";
 import { stageWorkerFailure } from "./worker-errors.js";
 import { loadWorkerAssets, requiredAsset } from "./worker-assets.js";
 
-const ASR_ASSET_IDS = [
-  "vad-model",
-  "asr-cmvn",
-  "asr-config",
-  "asr-model",
-  "asr-tokens",
-  "fbank-native",
-  "punc-config",
-  "punc-model",
-  "punc-tokens",
-] as const;
+export function asrAssetIds(engine: AsrEngine, mode: ProcessingMode): readonly string[] {
+  return [
+    "vad-model",
+    ...(engine === "parakeet" ? [] : ["fbank-native"]),
+    ...recognitionAssetIds(engine),
+    ...punctuationAssetIds(mode, engine),
+  ];
+}
+
+function pathOrEmpty(paths: Readonly<Record<string, string>>, id: string): string {
+  return paths[id] ?? "";
+}
 
 interface AsrComponents {
+  readonly engine: AsrEngine;
   readonly mode: ProcessingMode;
   readonly vad: LoadedVadModel;
   readonly recognizer: FunAsrRecognizer;
-  readonly loadPunctuator: () => Promise<FunAsrPunctuator>;
+  readonly loadPunctuator: (() => Promise<FunAsrPunctuator>) | undefined;
 }
 
 interface PartialAsrComponents {
@@ -42,11 +44,11 @@ interface PartialAsrComponents {
 
 function runtimeFactory(
   recognizer: FunAsrRecognizer,
-  loadPunctuator: () => Promise<FunAsrPunctuator>,
+  loadPunctuator: (() => Promise<FunAsrPunctuator>) | undefined,
 ): FunAsrRuntimeFactory {
   return {
     async loadRecognizer() { return recognizer; },
-    loadPunctuator,
+    ...(loadPunctuator === undefined ? {} : { loadPunctuator }),
   };
 }
 
@@ -61,26 +63,37 @@ async function closeComponents(components: PartialAsrComponents): Promise<void> 
   if (failures.length > 1) throw new AggregateError(failures, "ASR runtime failed to close");
 }
 
-async function loadComponents(paths: Readonly<Record<string, string>>, mode: ProcessingMode): Promise<AsrComponents> {
+async function loadComponents(
+  paths: Readonly<Record<string, string>>,
+  mode: ProcessingMode,
+  engine: AsrEngine,
+): Promise<AsrComponents> {
   const partial: PartialAsrComponents = {};
   try {
     partial.vad = await loadVadModel(requiredAsset(paths, "vad-model"));
-    const factory = createFunAsrRuntimeFactory({
-      asrCmvnPath: requiredAsset(paths, "asr-cmvn"),
-      asrConfigPath: requiredAsset(paths, "asr-config"),
-      asrModelPath: requiredAsset(paths, "asr-model"),
-      asrTokensPath: requiredAsset(paths, "asr-tokens"),
-      fbankPath: requiredAsset(paths, "fbank-native"),
-      punctuationConfigPath: mode === "base" ? undefined : requiredAsset(paths, "punc-config"),
-      punctuationModelPath: mode === "base" ? undefined : requiredAsset(paths, "punc-model"),
-      punctuationTokensPath: mode === "base" ? undefined : requiredAsset(paths, "punc-tokens"),
+    const recognition = await loadRecognitionEngine(engine, {
+      asrCmvnPath: pathOrEmpty(paths, "asr-cmvn"),
+      asrConfigPath: pathOrEmpty(paths, "asr-config"),
+      asrModelPath: pathOrEmpty(paths, "asr-model"),
+      asrTokensPath: pathOrEmpty(paths, "asr-tokens"),
+      fbankPath: pathOrEmpty(paths, "fbank-native"),
+      parakeetDecoderPath: pathOrEmpty(paths, "parakeet-decoder"),
+      parakeetEncoderPath: pathOrEmpty(paths, "parakeet-encoder"),
+      parakeetJoinerPath: pathOrEmpty(paths, "parakeet-joiner"),
+      parakeetTokensPath: pathOrEmpty(paths, "parakeet-tokens"),
+      ...(mode === "enhanced" && engine !== "parakeet" ? {
+        punctuationConfigPath: requiredAsset(paths, "punc-config"),
+        punctuationModelPath: requiredAsset(paths, "punc-model"),
+        punctuationTokensPath: requiredAsset(paths, "punc-tokens"),
+      } : {}),
     });
-    partial.recognizer = await factory.loadRecognizer();
+    partial.recognizer = recognition.recognizer;
     return {
+      engine,
       mode,
       vad: partial.vad,
-      recognizer: partial.recognizer,
-      loadPunctuator: () => factory.loadPunctuator(),
+      recognizer: recognition.recognizer,
+      loadPunctuator: recognition.loadPunctuator,
     };
   } catch (error) {
     await closeComponents(partial).catch(() => undefined);
@@ -157,9 +170,11 @@ async function executeAsr(
 export async function loadAsrWorkerRuntime(
   config: WorkerEntryConfig,
 ): Promise<LoadedWorkerRuntime<"asr">> {
-  const assets = await loadWorkerAssets(config, ASR_ASSET_IDS);
+  const mode = config.processing?.identity.mode ?? "enhanced";
+  const engine = config.processing?.identity.engine ?? "paraformer";
+  const assets = await loadWorkerAssets(config, asrAssetIds(engine, mode));
   const managedRoot = await prepareManagedAudioRoot(config.managedAudioDirectory);
-  const components = await loadComponents(assets.paths, config.processing?.identity.mode ?? "enhanced");
+  const components = await loadComponents(assets.paths, mode, engine);
   return {
     engineFingerprint: assets.engineFingerprint,
     execute: (run, report) => executeAsr(run, managedRoot, components, report),
