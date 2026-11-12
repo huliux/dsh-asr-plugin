@@ -12,6 +12,8 @@ import {
   type RecordingRpcStateValue,
   type RecordingRpcTrack,
   type RecordingRpcView,
+  type TranscriptExportRpcPayload,
+  type TranscriptExportRpcValue,
 } from "../recording/rpc-contract.js";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -180,6 +182,24 @@ function referenceCandidates(value: unknown): readonly MeetingReferenceRpcCandid
   return value.map(referenceCandidate);
 }
 
+function transcriptExportValue(value: unknown): TranscriptExportRpcValue {
+  const item = record(value);
+  exact(item, ["bytes", "format", "meeting_id", "output_path", "segment_count", "transcript_version"]);
+  if (typeof item.meeting_id !== "string" || !UUID_PATTERN.test(item.meeting_id)
+    || typeof item.output_path !== "string" || !item.output_path.startsWith("/")
+    || (item.format !== "md" && item.format !== "txt" && item.format !== "srt" && item.format !== "vtt")) {
+    throw new Error("INVALID_RESPONSE");
+  }
+  return {
+    bytes: nonnegativeInteger(item.bytes),
+    format: item.format,
+    meeting_id: item.meeting_id,
+    output_path: item.output_path,
+    segment_count: nonnegativeInteger(item.segment_count),
+    transcript_version: nonnegativeInteger(item.transcript_version),
+  };
+}
+
 async function call(
   rpc: ClientConnectionRpc,
   endpoint: string,
@@ -226,5 +246,20 @@ export class RecordingRpcClient {
     signal?: AbortSignal,
   ): Promise<RecordingRpcView> {
     return parseRecordingRpcView(await call(this.rpc, "control", payload, signal));
+  }
+
+  async exportTranscript(
+    payload: TranscriptExportRpcPayload,
+    signal?: AbortSignal,
+  ): Promise<TranscriptExportRpcValue> {
+    return transcriptExportValue(await call(this.rpc, "transcripts/export", payload, signal));
+  }
+
+  /** Resolves the folder the user picked, or null when the dialog was cancelled. */
+  async chooseTranscriptDirectory(signal?: AbortSignal): Promise<string | null> {
+    const value = await call(this.rpc, "transcripts/choose-directory", {}, signal);
+    if (value === null) return null;
+    if (typeof value !== "string" || !value.startsWith("/")) throw new Error("INVALID_RESPONSE");
+    return value;
   }
 }

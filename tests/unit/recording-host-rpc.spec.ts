@@ -180,6 +180,29 @@ it("does not play a diagnostic tone during an active recording", async () => {
   expect(permissions.test).not.toHaveBeenCalled();
 });
 
+it("exports transcripts and picks folders without accepting destination file paths", async () => {
+  let handler!: Parameters<RecordingRpcConnection["rpc"]["handle"]>[1];
+  const control = {chooseDirectory: vi.fn(async () => "/Users/erwindassen/Transcripts"),
+    exportTranscript: vi.fn(async () => ({bytes: 42, format: "md" as const,
+      meetingId: "a4f7e766-928b-4a96-87d7-f81921fddd1c", outputPath: "/Users/erwindassen/Transcripts/call.md",
+      segmentCount: 3, transcriptVersion: 1}))};
+  registerRecordingHostRpc({rpc:{handle:(_channel,value)=>{handler=value;return async()=>{};}}},
+    {getRecordingState:()=>null} as unknown as MeetingApplication, undefined, undefined, undefined, undefined, control);
+  const signal = new AbortController().signal;
+  expect(await handler("transcripts/choose-directory", {}, signal)).toEqual({ok:true,value:"/Users/erwindassen/Transcripts"});
+  const payload = {destination:"default",format:"md",include_speakers:true,include_timestamps:true,
+    meeting_id:"a4f7e766-928b-4a96-87d7-f81921fddd1c"};
+  expect(await handler("transcripts/export", payload, signal)).toEqual({ok:true,value:{bytes:42,format:"md",
+    meeting_id:"a4f7e766-928b-4a96-87d7-f81921fddd1c",output_path:"/Users/erwindassen/Transcripts/call.md",
+    segment_count:3,transcript_version:1}});
+  expect(control.exportTranscript).toHaveBeenCalledOnce();
+  for (const invalid of [{...payload, output_path:"/tmp/injected.md"}, {...payload, format:"docx"},
+    {...payload, meeting_id:"not-a-uuid"}, {...payload, directory:"relative/path"}]) {
+    expect(await handler("transcripts/export", invalid, signal)).toMatchObject({ok:false});
+  }
+  expect(control.exportTranscript).toHaveBeenCalledOnce();
+});
+
 it("prepares recording models without accepting paths or recording audio", async () => {
   let handler!: Parameters<RecordingRpcConnection["rpc"]["handle"]>[1];
   const prepare = vi.fn(async () => undefined);

@@ -6,7 +6,10 @@ export type TranscriptProjectionErrorCode =
   | "EXPORT_PATH_INVALID"
   | "EXPORT_TARGET_EXISTS"
   | "EXPORT_PERMISSION_DENIED"
-  | "EXPORT_WRITE_FAILED";
+  | "EXPORT_WRITE_FAILED"
+  | "EXPORT_DIRECTORY_REQUIRED"
+  | "EXPORT_DIRECTORY_INVALID"
+  | "EXPORT_PICKER_FAILED";
 
 export class TranscriptProjectionError extends Error {
   constructor(readonly code: TranscriptProjectionErrorCode, message: string, options?: ErrorOptions) {

@@ -91,7 +91,7 @@ export interface RecordingApplicationHost {
 }
 
 function title(value: string | undefined, startedAtMs: number): string {
-  if (value === undefined) return `录音会议 ${new Date(startedAtMs).toISOString()}`;
+  if (value === undefined) return `Recording ${new Date(startedAtMs).toISOString()}`;
   const result = value.trim();
   if (result.length < 1 || result.length > 200) {
     throw new RecordingSessionError("INVALID_INPUT");
@@ -218,7 +218,7 @@ export class RecordingApplication {
     });
     const jobId = this.dependencies.jobs.start({
       kind: "meeting",
-      label: `录音：${session.identity.title}`,
+      label: `Recording: ${session.identity.title}`,
       outputLimitBytes: JOB_OUTPUT_LIMIT_BYTES,
       ...(input.owner === undefined ? {} : { owner: input.owner }),
       output: [session.output],

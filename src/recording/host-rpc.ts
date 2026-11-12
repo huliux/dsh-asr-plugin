@@ -1,6 +1,7 @@
 import type { ModelDownloadControl } from "../assets/model-download-contract.js";
 import type { ModelSettingsStatus } from "../assets/model-settings-contract.js";
 import type { RecordingPermissionControl } from "./permission-contract.js";
+import type { TranscriptExportControl } from "../transcripts/transcript-export-contract.js";
 import type { MeetingApplication } from "../application/meeting-application.js";
 import type { MeetingReferenceCandidate } from "../application/meeting-reference.js";
 import type { RecordingControlInput } from "../application/recording-application.js";
@@ -10,6 +11,7 @@ import {
   type MeetingReferenceRpcResolvePayload,
   type RecordingRpcControlPayload,
   type RecordingRpcResult,
+  type TranscriptExportRpcPayload,
 } from "./rpc-contract.js";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -68,6 +70,19 @@ function control(payload: unknown, signal: AbortSignal): RecordingControlInput {
   return { action, meetingId: value.meeting_id, signal };
 }
 
+function transcriptExportPayload(payload: unknown): TranscriptExportRpcPayload {
+  const value = record(payload);
+  if (value === null || !exact(value,
+    ["destination", "directory", "format", "include_speakers", "include_timestamps", "meeting_id"])
+    || (value.directory !== undefined && (typeof value.directory !== "string"
+      || !value.directory.startsWith("/") || value.directory.length > 4_096))
+    || (value.destination !== "default" && value.destination !== "choose")
+    || !(["md", "txt", "srt", "vtt"] as const).includes(value.format as TranscriptExportRpcPayload["format"])
+    || typeof value.include_speakers !== "boolean" || typeof value.include_timestamps !== "boolean"
+    || typeof value.meeting_id !== "string" || !UUID_PATTERN.test(value.meeting_id)) inputError();
+  return value as unknown as TranscriptExportRpcPayload;
+}
+
 function failure(error: unknown): RecordingRpcResult {
   const code = typeof error === "object" && error !== null && "code" in error &&
     typeof error.code === "string" ? error.code : "ENGINE_FAILURE";
@@ -116,6 +131,7 @@ export function registerRecordingHostRpc(
   downloads?: ModelDownloadControl,
   permissions?: RecordingPermissionControl,
   prepareModels?: (signal: AbortSignal) => Promise<void>,
+  transcripts?: TranscriptExportControl,
 ): () => Promise<void> {
   return connection.rpc.handle(RECORDING_RPC_CHANNEL, async (endpoint, payload, signal) => {
     try {
@@ -171,6 +187,34 @@ export function registerRecordingHostRpc(
       }
       if (endpoint === "control") {
         return { ok: true, value: await application.controlRecording(control(payload, signal)) };
+      }
+      if (endpoint.startsWith("transcripts/") && transcripts !== undefined) {
+        if (endpoint === "transcripts/choose-directory") {
+          emptyPayload(payload);
+          return { ok: true, value: await transcripts.chooseDirectory(signal) };
+        }
+        if (endpoint === "transcripts/export") {
+          const request = transcriptExportPayload(payload);
+          const outcome = await transcripts.exportTranscript({
+            ...(request.directory === undefined ? {} : { directory: request.directory }),
+            destination: request.destination,
+            format: request.format,
+            includeSpeakers: request.include_speakers,
+            includeTimestamps: request.include_timestamps,
+            meetingId: request.meeting_id,
+          }, signal);
+          return {
+            ok: true,
+            value: {
+              bytes: outcome.bytes,
+              format: outcome.format,
+              meeting_id: outcome.meetingId,
+              output_path: outcome.outputPath,
+              segment_count: outcome.segmentCount,
+              transcript_version: outcome.transcriptVersion,
+            },
+          };
+        }
       }
       if (endpoint === "references/candidates") {
         const request = referenceCandidatesPayload(payload);

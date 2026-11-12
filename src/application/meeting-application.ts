@@ -418,6 +418,12 @@ export class MeetingApplication {
     return this.transcriptProjection.exportCommittedTranscript(input);
   }
 
+  /** Meeting metadata for host-side export naming and existence checks. */
+  getMeetingRecord(meetingId: string): MeetingRecord {
+    this.assertAccepting();
+    return this.requiredMeeting(meetingId);
+  }
+
   getMeetingReferenceCandidates(
     input: GetMeetingReferenceCandidatesInput,
   ): readonly MeetingReferenceCandidate[] {

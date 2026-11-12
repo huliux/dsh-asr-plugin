@@ -21,7 +21,7 @@ import { RecordingRpcClient } from "./recording-rpc-client.js";
 
 const POLL_MS = 2_000;
 
-export type RecordingPendingAction = RecordingRpcControlPayload["action"] | "join" | null;
+export type RecordingPendingAction = RecordingRpcControlPayload["action"] | "export" | "join" | null;
 
 export type Translate = (
   key: MeetingReferenceLocaleKey,
@@ -151,6 +151,49 @@ function useJoinReference(options: {
   }, [options]);
 }
 
+interface TranscriptExportOptions {
+  readonly client: RecordingRpcClient;
+  readonly mounted: React.RefObject<boolean>;
+  readonly setError: (value: string | null) => void;
+  readonly setNotice: (value: string | null) => void;
+  readonly setPending: (value: RecordingPendingAction) => void;
+  readonly settings: ConfigForm<Record<string, unknown>> | undefined;
+  readonly translate: Translate;
+  readonly view: RecordingRpcView | null;
+}
+
+/**
+ * Exports the committed Markdown transcript. The configured folder is used by
+ * default; modifier-click asks for a folder and remembers it, so the first
+ * export also configures the plugin setting.
+ */
+function useTranscriptExport(options: TranscriptExportOptions) {
+  return useCallback(async (choose: boolean) => {
+    const view = options.view;
+    if (view === null) return;
+    options.setPending("export");
+    options.setError(null);
+    options.setNotice(null);
+    try {
+      const result = await options.client.exportTranscript({
+        destination: choose ? "choose" : "default",
+        format: "md",
+        include_speakers: true,
+        include_timestamps: true,
+        meeting_id: view.meetingId,
+      });
+      if (!options.mounted.current) return;
+      options.setNotice(options.translate("panel.exportSaved", { path: result.output_path }));
+    } catch (cause) {
+      if (!options.mounted.current) return;
+      const code = cause instanceof Error ? cause.message : "ENGINE_FAILURE";
+      options.setError(code);
+    } finally {
+      if (options.mounted.current) options.setPending(null);
+    }
+  }, [options]);
+}
+
 export function RecordingPanel(props: RecordingPanelProps) {
   const { currentSessionId, locale, references, rpc, settings, translate } = props;
   useSyncExternalStore(listener => locale.subscribe(listener), () => locale.getSnapshot());
@@ -158,6 +201,7 @@ export function RecordingPanel(props: RecordingPanelProps) {
   const snapshot = useRecordingSnapshot(client, references);
   const prepare = useCallback((signal: AbortSignal) => client.prepareModels(signal), [client]);
   const [pendingAction, setPending] = useState<RecordingPendingAction>(null);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
   useEffect(() => {
     if (pendingAction !== "stop") return;
     const controller = new AbortController();
@@ -178,8 +222,13 @@ export function RecordingPanel(props: RecordingPanelProps) {
   );
   const configSnapshot = useCallback(() => settings?.getSnapshot() ?? null, [settings]);
   const settingsSnapshot = useSyncExternalStore(configSubscribe, configSnapshot);
+  const exportTranscript = useTranscriptExport({
+    client, mounted: snapshot.mounted, setError: snapshot.setError, setNotice: setExportNotice,
+    setPending, settings, translate, view: snapshot.view,
+  });
   const failure = snapshot.error ?? trackError(snapshot.view);
-  return <RecordingPanelView failure={failure} join={join} pending={pendingAction !== null} pendingAction={pendingAction}
+  return <RecordingPanelView exportNotice={exportNotice} exportTranscript={exportTranscript}
+    failure={failure} join={join} pending={pendingAction !== null} pendingAction={pendingAction}
     hasRecordingHistory={snapshot.hasRecordingHistory} prepare={prepare}
     preview={snapshot.preview} run={run} settings={settings} settingsRevision={settingsSnapshot?.revision}
     translate={translate} view={snapshot.view} />;

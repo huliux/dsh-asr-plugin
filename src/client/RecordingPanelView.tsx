@@ -12,6 +12,8 @@ import { useRecordingPanelLayout } from "./use-recording-panel-layout.js";
 import styles from "./RecordingPanel.module.css";
 
 export interface PanelViewProps {
+  readonly exportNotice?: string | null;
+  readonly exportTranscript?: (choose: boolean) => Promise<void>;
   readonly prepare?: (signal: AbortSignal) => Promise<void>;
   readonly hasRecordingHistory: boolean;
   readonly failure: string | null;
@@ -136,7 +138,15 @@ export function RecordingPanelView(props: PanelViewProps) {
         <Preview {...props} />
       </div>
       <footer className={styles.footer}>
+        {props.exportNotice != null && <span className={styles.hint}>{props.exportNotice}</span>}
         <FooterStatus {...props} />
+        <Tooltip label={translate("panel.exportHint")}>
+          <Button size="sm" className={styles.utility} aria-label={props.pendingAction === "export"
+            ? translate("panel.exporting") : translate("panel.export")} icon={<RecordingIcon name="export" />}
+            aria-busy={props.pendingAction === "export"} disabled={props.exportTranscript === undefined
+            || props.pending || props.view?.transcriptVersion == null}
+            onClick={event => void props.exportTranscript?.(event.altKey)} />
+        </Tooltip>
         <Tooltip label={translate("panel.reset")}>
           <Button size="sm" className={styles.utility} aria-label={translate("panel.reset")} icon={<IconRefreshOutlineRegular />} onClick={layout.reset} />
         </Tooltip>

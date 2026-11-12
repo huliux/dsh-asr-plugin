@@ -76,6 +76,12 @@ export const zh = {
   "panel.error.state": "录音状态已变化。请刷新页面后重试。",
   "panel.error.generic": "操作未完成。请重试；若再次失败，请查看技术详情。",
   "panel.error.details": "技术详情",
+  "panel.export": "导出转写",
+  "panel.exportHint": "导出 Markdown 到默认文件夹；按住 ⌥ 选择保存位置。",
+  "panel.exporting": "正在导出转写",
+  "panel.exportSaved": "已保存到 {path}",
+  "panel.error.export": "无法导出转写。请检查保存位置、文件夹权限后重试。",
+  "panel.error.exportDirectory": "尚未设置转写保存位置。请在插件设置中选择文件夹，或按住 ⌥ 导出以选择位置。",
   "panel.noSession": "请先创建或选择一个工作区",
 } as const;
 
@@ -150,6 +156,12 @@ export const en = {
   "panel.error.generic": "The operation did not finish. Retry; if it fails again, check the technical details.",
   "panel.error.details": "Technical details",
   "panel.noSession": "Create or select a workspace first",
+  "panel.export": "Export transcript",
+  "panel.exportHint": "Exports Markdown to the default folder; hold ⌥ to choose a location.",
+  "panel.exporting": "Exporting transcript",
+  "panel.exportSaved": "Saved to {path}",
+  "panel.error.export": "The transcript could not be exported. Check the folder and its permissions, then retry.",
+  "panel.error.exportDirectory": "No transcript folder is configured yet. Choose one in the plugin settings, or hold ⌥ while exporting to pick a location.",
 } satisfies Record<MeetingReferenceLocaleKey, string>;
 
 declare module "@deepseek-ai/dsh-client-ui-slots" {

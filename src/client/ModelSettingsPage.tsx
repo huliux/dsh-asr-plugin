@@ -1,5 +1,6 @@
 import { ModelDownloadSettings } from "./ModelDownloadSettings.js";
 import { RecordingPermissionSettings } from "./RecordingPermissionSettings.js";
+import { TranscriptSettings } from "./TranscriptSettings.js";
 import { useCallback, useEffect, useState } from "react";
 import {
   Button, CodeBlock, DisclosureRow, IconInfoOutlineRegular, IconRefreshOutlineRegular,
@@ -89,6 +90,7 @@ export function ModelSettingsPage({ form, rpc, t }: Props) {
     {loading ? <p className={styles.loading} role="status"><StateDot state="ongoing" />{t("loading")}</p> : null}
     <ModelDownloadSettings form={form} rpc={rpc} t={t} models={status} onInstalled={installed} />
     <RecordingPermissionSettings rpc={rpc} t={t} />
+    <TranscriptSettings form={form} rpc={rpc} t={t} />
     {error ? <p className={styles.error} role="status"><StateDot state="error" />{t("failed")}</p> : null}
     {status !== null ? <><ModelDiagnostics status={status} t={t} /><ModelInstructions status={status} t={t} /></> : null}
   </div>;

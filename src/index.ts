@@ -22,6 +22,8 @@ import { effectiveConfig, readVolatile, refreshSettingsOnActivation,
 import { createProductRecordingFactories } from "./recording/product-factories.js";
 import { RecordingModelWorker } from "./recording/model-worker.js";
 import { registerRecordingHostRpc } from "./recording/host-rpc.js";
+import { createMacDirectoryPicker } from "./transcripts/directory-picker.js";
+import { createTranscriptExportControl } from "./transcripts/transcript-export-control.js";
 import { recordingHttpConnection, type RecordingWebServer } from "./recording/http-connection.js";
 import { acquireDataRootLease } from "./storage/data-root-lease.js";
 import { openManagedAudioStore } from "./storage/managed-audio-store.js";
@@ -56,6 +58,9 @@ export interface Config {
   readonly hf_download_route?: "default" | "direct" | "proxy";
   readonly hf_proxy_url?: string;
   readonly hf_proxy_kind?: "mirror" | "http";
+  readonly transcript_directory?: string;
+  readonly mic_device_uid?: string;
+  readonly system_device_uid?: string;
 }
 
 export const Config = z.object({
@@ -67,6 +72,12 @@ export const Config = z.object({
   hf_proxy_url: z.string().default("").volatile(),
   hf_proxy_kind: z.union(["mirror", "http"]).volatile(),
   data_dir: z.string().default(DEFAULT_DATA_DIRECTORY),
+  transcript_directory: z.string().default("").volatile()
+    .description("Default folder for exported transcripts; empty asks on export"),
+  mic_device_uid: z.string().default("").volatile()
+    .description("Microphone device UID; empty follows the macOS default input"),
+  system_device_uid: z.string().default("").volatile()
+    .description("System-audio device UID; empty follows the macOS default output"),
 });
 
 type ParsedConfig = ReturnType<typeof Config>;
@@ -271,12 +282,18 @@ export async function apply(context: Context, config: ParsedConfig): Promise<voi
             (proxyUrl.trim() ? "http" : "mirror") };
       } });
     lifetime.downloads = downloads;
+    const transcripts = createTranscriptExportControl({
+      directory: () => readVolatile<string>(effectiveConfig<ParsedConfig>(context).transcript_directory) ?? "",
+      meeting: application,
+      picker: createMacDirectoryPicker({ subprocess: context.subprocess }),
+      pickerPrompt: () => "Choose a folder for exported transcripts",
+    });
     context.inject(["connection", "webServer"], (webContext) => {
       const connection = recordingHttpConnection(webContext.connection, webContext.get("webServer") as RecordingWebServer);
       webContext.jobs.attachController("dsh-asr-recording-web");
       const removeRpc = registerRecordingHostRpc(connection, application, signal => readModelSettings(
         { dataRoot: paths.dataRoot, packageRoot: PACKAGE_ROOT, engine: selectedEngine(context), signal },
-      ), downloads, recording.permissions, signal => application.prepareRecording(signal));
+      ), downloads, recording.permissions, signal => application.prepareRecording(signal), transcripts);
       webContext.effect(() => removeRpc, "dsh-asr: recording client RPC");
     });
   } catch (error) {

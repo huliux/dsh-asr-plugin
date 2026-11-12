@@ -16,6 +16,8 @@ const groups: readonly [MeetingReferenceLocaleKey, readonly string[]][] = [
   ["panel.error.resources", ["RESOURCE_LIMIT"]],
   ["panel.error.cancelled", ["CANCELLED_BY_USER", "WORKER_CANCELLED", "STAGE_ABORTED"]],
   ["panel.error.state", ["INVALID_INPUT", "INVALID_REQUEST", "INVALID_MEETING_STATE", "MEETING_NOT_FOUND", "TRANSCRIPT_VERSION_CONFLICT", "RUN_STATE_CONFLICT"]],
+  ["panel.error.exportDirectory", ["EXPORT_DIRECTORY_REQUIRED", "EXPORT_DIRECTORY_INVALID"]],
+  ["panel.error.export", ["EXPORT_PATH_INVALID", "EXPORT_TARGET_EXISTS", "EXPORT_PERMISSION_DENIED", "EXPORT_WRITE_FAILED", "EXPORT_PICKER_FAILED", "TRANSCRIPT_NOT_COMMITTED", "TRANSCRIPT_EMPTY"]],
 ];
 
 export function recordingErrorCopy(code: string, translate: (key: MeetingReferenceLocaleKey) => string): string {

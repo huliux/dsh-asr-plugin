@@ -15,6 +15,8 @@ export const RECORDING_RPC_ENDPOINTS = [
   "permissions/status",
   "permissions/test",
   "permissions/open-settings",
+  "transcripts/export",
+  "transcripts/choose-directory",
 ] as const;
 
 export type RecordingRpcEndpoint = (typeof RECORDING_RPC_ENDPOINTS)[number];
@@ -71,6 +73,24 @@ export interface RecordingRpcStateValue {
   readonly recording: RecordingRpcView | null;
 }
 
+export interface TranscriptExportRpcPayload {
+  readonly destination: "default" | "choose";
+  readonly directory?: string;
+  readonly format: "md" | "txt" | "srt" | "vtt";
+  readonly include_speakers: boolean;
+  readonly include_timestamps: boolean;
+  readonly meeting_id: string;
+}
+
+export interface TranscriptExportRpcValue {
+  readonly bytes: number;
+  readonly format: "md" | "txt" | "srt" | "vtt";
+  readonly meeting_id: string;
+  readonly output_path: string;
+  readonly segment_count: number;
+  readonly transcript_version: number;
+}
+
 export interface RecordingRpcControlPayload {
   readonly action: "start" | "stop" | "mic_on" | "mic_off" | "system_on" | "system_off";
   readonly meeting_id?: string;
@@ -99,7 +119,7 @@ export interface MeetingReferenceRpcResolvePayload {
   readonly meeting_id: string;
 }
 
-export type RecordingRpcValue = RecordingPermissions | null | ModelDownloadStatus | ModelSettingsStatus | RecordingRpcStateValue | RecordingRpcView
+export type RecordingRpcValue = RecordingPermissions | null | ModelDownloadStatus | ModelSettingsStatus | RecordingRpcStateValue | RecordingRpcView | TranscriptExportRpcValue | string
   | readonly MeetingReferenceRpcCandidate[] | MeetingReferenceRpcCandidate;
 
 export type RecordingRpcResult<T = RecordingRpcValue> =
