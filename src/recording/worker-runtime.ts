@@ -1,15 +1,19 @@
-import type { ProcessingMode } from "../assets/processing-identity.js";
+import type { AsrEngine, ProcessingMode } from "../assets/processing-identity.js";
 import { setTimeout as delay } from "node:timers/promises";
 import { realpath, stat } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 
 import { StreamingBoundedVad } from "../asr/bounded-vad.js";
-import { createFunAsrRuntimeFactory } from "../asr/funasr/factory.js";
 import {
   runFunAsrWithLoadedRuntime,
   type FunAsrPunctuator,
   type FunAsrRecognizer,
 } from "../asr/funasr/pipeline.js";
+import {
+  loadRecognitionEngine,
+  punctuationAssetIds,
+  recognitionAssetIds,
+} from "../asr/recognition.js";
 import { loadVadModel, type LoadedVadModel } from "../asr/vad-model.js";
 import { buildRecordingAudioCandidate } from "../audio/recording-audio-candidate.js";
 import { openClosedRecordingChunks, ClosedRecordingChunkError } from "../audio/closed-recording-chunks.js";
@@ -43,19 +47,16 @@ import type {
 } from "./worker-types.js";
 
 const CADENCE_MS = 5_000;
-const RECORDING_ASSET_IDS = [
-  "vad-model",
-  "asr-cmvn",
-  "asr-config",
-  "asr-model",
-  "asr-tokens",
-  "fbank-native",
-  "punc-config",
-  "punc-model",
-  "punc-tokens",
-  "speaker-embedding-model",
-  "hcluster-native",
-] as const;
+export function recordingAssetIds(engine: AsrEngine, mode: ProcessingMode): readonly string[] {
+  return [
+    "vad-model",
+    "fbank-native",
+    "speaker-embedding-model",
+    "hcluster-native",
+    ...recognitionAssetIds(engine),
+    ...punctuationAssetIds(mode, engine),
+  ];
+}
 
 interface RecordingComponents {
   readonly mode: ProcessingMode;
@@ -88,24 +89,34 @@ async function closeComponents(components: PartialRecordingComponents): Promise<
   if (failures.length > 1) throw new AggregateError(failures, "Recording runtime failed to close");
 }
 
-async function loadComponents(paths: Readonly<Record<string, string>>, mode: ProcessingMode): Promise<RecordingComponents> {
+async function loadComponents(
+  paths: Readonly<Record<string, string>>,
+  mode: ProcessingMode,
+  engine: AsrEngine,
+): Promise<RecordingComponents> {
   const partial: PartialRecordingComponents = {};
   try {
     const vad = await loadVadModel(requiredAsset(paths, "vad-model"));
     partial.vad = vad;
-    const factory = createFunAsrRuntimeFactory({
-      asrCmvnPath: requiredAsset(paths, "asr-cmvn"),
-      asrConfigPath: requiredAsset(paths, "asr-config"),
-      asrModelPath: requiredAsset(paths, "asr-model"),
-      asrTokensPath: requiredAsset(paths, "asr-tokens"),
+    const recognition = await loadRecognitionEngine(engine, {
+      asrCmvnPath: paths["asr-cmvn"] ?? "",
+      asrConfigPath: paths["asr-config"] ?? "",
+      asrModelPath: paths["asr-model"] ?? "",
+      asrTokensPath: paths["asr-tokens"] ?? "",
       fbankPath: requiredAsset(paths, "fbank-native"),
-      punctuationConfigPath: mode === "base" ? undefined : requiredAsset(paths, "punc-config"),
-      punctuationModelPath: mode === "base" ? undefined : requiredAsset(paths, "punc-model"),
-      punctuationTokensPath: mode === "base" ? undefined : requiredAsset(paths, "punc-tokens"),
+      parakeetDecoderPath: paths["parakeet-decoder"] ?? "",
+      parakeetEncoderPath: paths["parakeet-encoder"] ?? "",
+      parakeetJoinerPath: paths["parakeet-joiner"] ?? "",
+      parakeetTokensPath: paths["parakeet-tokens"] ?? "",
+      ...(mode === "enhanced" && engine !== "parakeet" ? {
+        punctuationConfigPath: requiredAsset(paths, "punc-config"),
+        punctuationModelPath: requiredAsset(paths, "punc-model"),
+        punctuationTokensPath: requiredAsset(paths, "punc-tokens"),
+      } : {}),
     });
-    const recognizer = await factory.loadRecognizer();
-    partial.recognizer = recognizer;
-    const punctuator = mode === "base" ? undefined : await factory.loadPunctuator();
+    partial.recognizer = recognition.recognizer;
+    const punctuator = recognition.loadPunctuator === undefined
+      ? undefined : await recognition.loadPunctuator();
     if (punctuator !== undefined) partial.punctuator = punctuator;
     const diarization = await loadMeetingDiarizationComponents({
       embeddingModelPath: requiredAsset(paths, "speaker-embedding-model"),
@@ -116,7 +127,7 @@ async function loadComponents(paths: Readonly<Record<string, string>>, mode: Pro
     return {
       mode,
       vad,
-      recognizer,
+      recognizer: recognition.recognizer,
       punctuator,
       clusterer: diarization.clusterer,
       embeddingModel: diarization.embeddingModel,
@@ -368,11 +379,14 @@ export async function loadRecordingModels(
 ): Promise<import("./model-server.js").LoadedRecordingModels> {
   const meetingsRoot = await prepareManagedAudioRoot(config.meetingsRoot);
   const workRoot = await prepareManagedAudioRoot(config.workRoot);
-  const assets = await loadWorkerAssets(workerAssetConfig(config, meetingsRoot), RECORDING_ASSET_IDS);
+  const mode = config.processing?.identity.mode ?? "enhanced";
+  const engine = config.processing?.identity.engine ?? "paraformer";
+  const assets = await loadWorkerAssets(
+    workerAssetConfig(config, meetingsRoot), recordingAssetIds(engine, mode));
   if (assets.engineFingerprint !== config.expectedFingerprint) {
     throw new WorkerRuntimeError("ASSET_MISMATCH", "Recording engine fingerprint changed");
   }
-  const components = await loadComponents(assets.paths, config.processing?.identity.mode ?? "enhanced");
+  const components = await loadComponents(assets.paths, mode, engine);
   return {
     engineFingerprint: assets.engineFingerprint,
     createSession: (meetingId, runId) => openRecordingRuntime(

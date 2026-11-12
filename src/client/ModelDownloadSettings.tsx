@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, DisclosureRow, IconInfoOutlineRegular, Input, StateDot, Tag } from "@deepseek-ai/dsh-client-ui-primitives";
 import type { ConfigPageForm } from "@deepseek-ai/dsh-client-ui-plugin-manager/client";
 import type { ClientConnectionRpc } from "@deepseek-ai/dsh-client-connection/client";
-import type { ModelDownloadStatus } from "../assets/model-download-contract.js";
+import type { ModelDownloadPack, ModelDownloadStatus } from "../assets/model-download-contract.js";
 import type { ModelSettingsStatus } from "../assets/model-settings-contract.js";
 import type { ModelSettingsTranslate } from "./model-settings-locales.js";
 import { readDownloadStatus, saveDownloadSettings, startModelDownload } from "./model-download-client.js";
@@ -74,7 +74,7 @@ function useDownloadActions({ rpc, form, draft, setDraft, setStatus, setError }:
   setError: (value: "downloadFailed" | "proxyInvalid" | "conflict" | null) => void;
 }) {
   const [acting, setActing] = useState(false);
-  const act = async (action: "start" | "cancel", pack?: "base" | "punctuation") => {
+  const act = async (action: "start" | "cancel", pack?: ModelDownloadPack) => {
     setActing(true); setError(null);
     try {
       if (action === "start" && pack !== undefined) {
@@ -102,15 +102,15 @@ export function ModelDownloadSettings(props: Props) {
   const { writable, status, active, acting, saving, act, error } = state;
   return <>
     <section className={styles.card} aria-label={t("assets")}>
-      {(["base", "punctuation"] as const).map(pack => <div key={pack} className={styles.modelBlock}>
+      {(["base", "parakeet", "punctuation"] as const).map(pack => <div key={pack} className={styles.modelBlock}>
         <div className={styles.modelRow}>
           <div className={styles.modelCopy}><div className={styles.modelTitle}>
             <span className={styles.label}>{t(pack)}</span>
             {models !== null ? <Tag tone={models[pack].state === "ready" ? "success" : models[pack].state === "invalid" ? "danger" : "neutral"}>
               {t(models[pack].state)}</Tag> : null}
-          </div><p className={styles.description}>{t(`${pack}Description`)} · {t(pack === "base" ? "baseSize" : "punctuationSize")}</p></div>
+          </div><p className={styles.description}>{t(`${pack}Description`)} · {t(`${pack}Size`)}</p></div>
           {models?.[pack].state !== "ready" ? <Button size="sm"
-            variant={pack === "base" ? "primary" : "outline"} aria-label={t(pack === "base" ? "downloadBase" : "downloadPunctuation")}
+            variant={pack === "base" ? "primary" : "outline"} aria-label={t(pack === "base" ? "downloadBase" : pack === "parakeet" ? "downloadParakeet" : "downloadPunctuation")}
             disabled={!writable || status === null || active || acting || saving || models === null}
             onClick={() => { void act("start", pack); }}>{t(models?.[pack].state === "invalid" ? "repair" : "download")}</Button> : null}
         </div>

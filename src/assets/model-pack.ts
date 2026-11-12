@@ -10,7 +10,7 @@ export interface ModelPackMaterial {
   readonly sha256: string;
 }
 
-export type ModelPackKind = "base" | "punctuation";
+export type ModelPackKind = "base" | "parakeet" | "punctuation";
 
 interface ModelPackContents {
   readonly assets: AssetRecord[];
@@ -25,14 +25,28 @@ export type ModelPackManifest = ModelPackContents & (
 );
 
 const PUNCTUATION_IDS = new Set(["punc-config", "punc-model", "punc-tokens"]);
+const PARAKEET_PREFIX = "parakeet-";
+/** Language-agnostic acoustic assets shared by every recognizer family. */
+const SHARED_IDS = new Set(["vad-model", "speaker-embedding-model"]);
 
 export function isPunctuationAsset(asset: Pick<AssetRecord, "id">): boolean {
   return PUNCTUATION_IDS.has(asset.id);
 }
 
+export function isParakeetAsset(asset: Pick<AssetRecord, "id">): boolean {
+  return asset.id.startsWith(PARAKEET_PREFIX);
+}
+
+export function isSharedAsset(asset: Pick<AssetRecord, "id">): boolean {
+  return SHARED_IDS.has(asset.id);
+}
+
 export function modelPackAssets(manifest: AssetManifest, pack?: ModelPackKind): AssetRecord[] {
-  return runtimeModelAssets(manifest).filter((asset) => pack === undefined ||
-    isPunctuationAsset(asset) === (pack === "punctuation"));
+  return runtimeModelAssets(manifest).filter((asset) => {
+    if (pack === undefined) return true;
+    if (pack === "parakeet") return isParakeetAsset(asset) || isSharedAsset(asset);
+    return !isParakeetAsset(asset) && isPunctuationAsset(asset) === (pack === "punctuation");
+  });
 }
 
 export function modelPackFingerprint(manifest: AssetManifest, pack?: ModelPackKind): string {
@@ -169,7 +183,7 @@ function parseContents(value: unknown): ModelPackManifest {
     !hasExactKeys(value, keys) ||
     (value.schemaVersion !== 1 && value.schemaVersion !== 2) ||
     (value.schemaVersion === 2 &&
-      ((value.packKind !== "base" && value.packKind !== "punctuation") ||
+      ((value.packKind !== "base" && value.packKind !== "parakeet" && value.packKind !== "punctuation") ||
       typeof value.compatibilityFingerprint !== "string" ||
       !/^[0-9a-f]{64}$/u.test(value.compatibilityFingerprint))) ||
     typeof value.modelSetFingerprint !== "string" ||

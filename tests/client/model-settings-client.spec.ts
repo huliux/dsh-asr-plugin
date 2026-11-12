@@ -2,8 +2,9 @@ import { expect, it, vi } from "vitest";
 import { readModelStatus } from "../../src/client/model-settings-client.js";
 
 const ready = { state: "ready", issues: [] };
-const status = { mode: "enhanced", preference: null, inheritedLegacy: false,
-  selectedReady: true, base: ready, punctuation: ready, native: ready, dataDirectory: "/owned/data" };
+const status = { engine: "paraformer", mode: "enhanced", preference: null, inheritedLegacy: false,
+  selectedReady: true, base: ready, parakeet: ready, punctuation: ready, native: ready,
+  dataDirectory: "/owned/data" };
 
 it("reads automatic punctuation status without a configuration write", async () => {
   const rpc = { call: vi.fn(async () => ({ ok: true, value: status })) };

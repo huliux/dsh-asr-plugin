@@ -159,13 +159,13 @@ describe("readSupplyChainManifest", () => {
     }
   });
 
-  it("固化当前 11 个 runtime 资产与 ORT 的真实供应链闭包", async () => {
+  it("固化当前 15 个 runtime 资产与 ORT 的真实供应链闭包", async () => {
     const manifest = await readSupplyChainManifest({
       runtimeManifestPath: resolve("src/assets/manifest.json"),
       supplyChainPath: resolve("src/assets/supply-chain.json"),
     });
 
-    expect(manifest.assets).toHaveLength(11);
+    expect(manifest.assets).toHaveLength(15);
     expect(manifest.dependencies).toEqual([
       expect.objectContaining({
         id: "onnxruntime-node",

@@ -1,7 +1,7 @@
 import type { ConfigPageForm } from "@deepseek-ai/dsh-client-ui-plugin-manager/client";
 import type { ClientConnectionRpc } from "@deepseek-ai/dsh-client-connection/client";
 import { modelProxyUrl } from "../assets/model-download-contract.js";
-import type { ModelDownloadPhase, ModelDownloadStatus } from "../assets/model-download-contract.js";
+import type { ModelDownloadPack, ModelDownloadPhase, ModelDownloadStatus } from "../assets/model-download-contract.js";
 import { callRecordingRpc } from "./recording-rpc-transport.js";
 
 export async function readDownloadStatus(rpc: ClientConnectionRpc, signal?: AbortSignal): Promise<ModelDownloadStatus> {
@@ -9,7 +9,7 @@ export async function readDownloadStatus(rpc: ClientConnectionRpc, signal?: Abor
   if (!response.ok || typeof response.value !== "object" || response.value === null) throw new Error("INVALID_RESPONSE");
   const value = response.value as Record<string, unknown>;
   if (!["idle", "downloading", "verifying", "installing", "completed", "failed", "cancelled"].includes(String(value.phase)) ||
-    (value.pack !== null && value.pack !== "base" && value.pack !== "punctuation") ||
+    (value.pack !== null && !["base", "parakeet", "punctuation"].includes(String(value.pack))) ||
     (value.jobId !== null && typeof value.jobId !== "string") ||
     (value.errorCode !== null && typeof value.errorCode !== "string") ||
     !Number.isSafeInteger(value.downloadedBytes) || !Number.isSafeInteger(value.totalBytes) ||
@@ -36,7 +36,7 @@ export interface DownloadConnectionDraft {
 }
 
 export async function startModelDownload(rpc: ClientConnectionRpc, form: ConfigPageForm | undefined,
-  pack: "base" | "punctuation", draft: DownloadConnectionDraft | null, onSaved?: () => void) {
+  pack: ModelDownloadPack, draft: DownloadConnectionDraft | null, onSaved?: () => void) {
   if (draft !== null) {
     if (form === undefined) return "conflict" as const;
     const saved = await saveDownloadSettings(form, draft.route, draft.proxy, draft.revision, draft.kind);

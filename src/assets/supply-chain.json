@@ -266,6 +266,98 @@
         "architecture": "arm64",
         "napi": 8
       }
+    },
+    {
+      "id": "parakeet-encoder",
+      "sourceMode": "reuse",
+      "canonicalRepository": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8",
+      "revision": "ed5d745623472f97cfc2e6c2916ee248798fc5a8",
+      "sourcePath": "encoder.int8.onnx",
+      "license": "CC-BY-4.0",
+      "licenseFiles": [
+        "third_party/licenses/CC-BY-4.0.md"
+      ],
+      "attribution": "NVIDIA Parakeet TDT 0.6B v3 multilingual speech recognition model; ONNX int8 export by csukuangfj for sherpa-onnx; model bytes unchanged and repackaged.",
+      "distribution": "public",
+      "transports": [
+        {
+          "kind": "canonical",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/ed5d745623472f97cfc2e6c2916ee248798fc5a8/encoder.int8.onnx"
+        },
+        {
+          "kind": "cn-mirror",
+          "url": "https://hf-mirror.com/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/ed5d745623472f97cfc2e6c2916ee248798fc5a8/encoder.int8.onnx"
+        }
+      ]
+    },
+    {
+      "id": "parakeet-decoder",
+      "sourceMode": "reuse",
+      "canonicalRepository": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8",
+      "revision": "ed5d745623472f97cfc2e6c2916ee248798fc5a8",
+      "sourcePath": "decoder.int8.onnx",
+      "license": "CC-BY-4.0",
+      "licenseFiles": [
+        "third_party/licenses/CC-BY-4.0.md"
+      ],
+      "attribution": "NVIDIA Parakeet TDT 0.6B v3 multilingual speech recognition model; ONNX int8 export by csukuangfj for sherpa-onnx; model bytes unchanged and repackaged.",
+      "distribution": "public",
+      "transports": [
+        {
+          "kind": "canonical",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/ed5d745623472f97cfc2e6c2916ee248798fc5a8/decoder.int8.onnx"
+        },
+        {
+          "kind": "cn-mirror",
+          "url": "https://hf-mirror.com/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/ed5d745623472f97cfc2e6c2916ee248798fc5a8/decoder.int8.onnx"
+        }
+      ]
+    },
+    {
+      "id": "parakeet-joiner",
+      "sourceMode": "reuse",
+      "canonicalRepository": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8",
+      "revision": "ed5d745623472f97cfc2e6c2916ee248798fc5a8",
+      "sourcePath": "joiner.int8.onnx",
+      "license": "CC-BY-4.0",
+      "licenseFiles": [
+        "third_party/licenses/CC-BY-4.0.md"
+      ],
+      "attribution": "NVIDIA Parakeet TDT 0.6B v3 multilingual speech recognition model; ONNX int8 export by csukuangfj for sherpa-onnx; model bytes unchanged and repackaged.",
+      "distribution": "public",
+      "transports": [
+        {
+          "kind": "canonical",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/ed5d745623472f97cfc2e6c2916ee248798fc5a8/joiner.int8.onnx"
+        },
+        {
+          "kind": "cn-mirror",
+          "url": "https://hf-mirror.com/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/ed5d745623472f97cfc2e6c2916ee248798fc5a8/joiner.int8.onnx"
+        }
+      ]
+    },
+    {
+      "id": "parakeet-tokens",
+      "sourceMode": "reuse",
+      "canonicalRepository": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8",
+      "revision": "ed5d745623472f97cfc2e6c2916ee248798fc5a8",
+      "sourcePath": "tokens.txt",
+      "license": "CC-BY-4.0",
+      "licenseFiles": [
+        "third_party/licenses/CC-BY-4.0.md"
+      ],
+      "attribution": "NVIDIA Parakeet TDT 0.6B v3 multilingual speech recognition model; ONNX int8 export by csukuangfj for sherpa-onnx; model bytes unchanged and repackaged.",
+      "distribution": "public",
+      "transports": [
+        {
+          "kind": "canonical",
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/ed5d745623472f97cfc2e6c2916ee248798fc5a8/tokens.txt"
+        },
+        {
+          "kind": "cn-mirror",
+          "url": "https://hf-mirror.com/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/ed5d745623472f97cfc2e6c2916ee248798fc5a8/tokens.txt"
+        }
+      ]
     }
   ],
   "dependencies": [

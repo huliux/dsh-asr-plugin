@@ -1,5 +1,5 @@
 import { configuredProcessingMode, resolveProcessingAssets } from "./runtime-mode.js";
-import type { ProcessingIdentity, ProcessingMode } from "./processing-identity.js";
+import type { AsrEngine, ProcessingIdentity, ProcessingMode } from "./processing-identity.js";
 import { randomUUID } from "node:crypto";
 import { chmod, mkdtemp, readdir, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -40,6 +40,7 @@ export type {
 export interface RuntimeAssetsInput {
   readonly signal?: AbortSignal;
   readonly mode?: ProcessingMode;
+  readonly engine?: AsrEngine;
   readonly dataRoot: string;
   readonly packageRoot: string;
 }
@@ -277,7 +278,9 @@ export async function resolveRuntimeAssets(
   input: RuntimeAssetsInput,
 ): Promise<ResolvedRuntimeAssets> {
   const layout = await runtimeLayout(input);
-  if (input.mode !== undefined) return { ...layout, ...await resolveProcessingAssets(layout, input.mode, input.signal) };
+  if (input.mode !== undefined) {
+    return { ...layout, ...await resolveProcessingAssets(layout, input.mode, input.engine, input.signal) };
+  }
   await verifyRuntimeManifestAssets(layout, input.signal);
   return {
     engineFingerprint: layout.engineFingerprint,
@@ -295,8 +298,8 @@ export async function resolveConfiguredRuntimeAssets(
   const lease = await acquireModelStageLease(input.dataRoot, input.signal);
   try {
     const layout = await runtimeLayout(input);
-    const mode = await configuredProcessingMode(layout, input.signal);
-    return { ...layout, ...await resolveProcessingAssets(layout, mode, input.signal) };
+    const mode = await configuredProcessingMode(layout, input.engine, input.signal);
+    return { ...layout, ...await resolveProcessingAssets(layout, mode, input.engine, input.signal) };
   } finally {
     await lease[Symbol.asyncDispose]();
   }

@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import type { ClientConnectionRpc } from "@deepseek-ai/dsh-client-connection/client";
+import type { ConfigForm } from "@deepseek-ai/dsh-client-ui-settings/client";
 
 import type {
   RecordingRpcControlPayload,
@@ -49,6 +50,7 @@ interface RecordingPanelProps {
   readonly locale: LocaleFace;
   readonly references: RecordingReferenceActions;
   readonly rpc: ClientConnectionRpc;
+  readonly settings?: ConfigForm<Record<string, unknown>>;
   readonly translate: Translate;
 }
 
@@ -150,7 +152,7 @@ function useJoinReference(options: {
 }
 
 export function RecordingPanel(props: RecordingPanelProps) {
-  const { currentSessionId, locale, references, rpc, translate } = props;
+  const { currentSessionId, locale, references, rpc, settings, translate } = props;
   useSyncExternalStore(listener => locale.subscribe(listener), () => locale.getSnapshot());
   const client = useMemo(() => new RecordingRpcClient(rpc), [rpc]);
   const snapshot = useRecordingSnapshot(client, references);
@@ -170,8 +172,15 @@ export function RecordingPanel(props: RecordingPanelProps) {
     mounted: snapshot.mounted, references, setError: snapshot.setError,
     setPending, translate, view: snapshot.view?.recordingStartedAtMs === null ? null : snapshot.view,
   });
+  const configSubscribe = useCallback(
+    (listener: () => void) => settings?.subscribe(listener) ?? (() => undefined),
+    [settings],
+  );
+  const configSnapshot = useCallback(() => settings?.getSnapshot() ?? null, [settings]);
+  const settingsSnapshot = useSyncExternalStore(configSubscribe, configSnapshot);
   const failure = snapshot.error ?? trackError(snapshot.view);
   return <RecordingPanelView failure={failure} join={join} pending={pendingAction !== null} pendingAction={pendingAction}
     hasRecordingHistory={snapshot.hasRecordingHistory} prepare={prepare}
-    preview={snapshot.preview} run={run} translate={translate} view={snapshot.view} />;
+    preview={snapshot.preview} run={run} settings={settings} settingsRevision={settingsSnapshot?.revision}
+    translate={translate} view={snapshot.view} />;
 }

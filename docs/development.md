@@ -74,6 +74,13 @@ words and timestamps. Verified installed punctuation applies to new attempts;
 damaged installed punctuation blocks preparation until repaired.
 See [model assets](model-assets.md).
 
+The identity also records the recognizer family (`paraformer` or `parakeet`).
+A self-punctuating engine reports per-chunk punctuation in its draft and runs the
+punctuated block path without loading a punctuator, so `enhanced` mode may carry
+a null punctuation fingerprint for it. Identity fields are hashed, so changing
+the configured engine invalidates cached drafts while committed transcripts keep
+the fingerprint they were produced with.
+
 Recorder expansion can prepare models without creating a meeting, job or capture
 session. Each start verifies runtime assets and performs fresh silent permission
 admission before meeting or job creation. Permission results are not cached.

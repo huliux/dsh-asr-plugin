@@ -18,8 +18,9 @@ function text(node: ReactNode): string {
   return text(node.props.children);
 }
 it("does not expose the configured personal directory in developer command examples", () => {
-  const status = { dataDirectory: "/Users/private-name/.dsh/private-data", base: {state:"ready",issues:[]},
-    punctuation:{state:"missing",issues:[]}, native:{state:"ready",issues:[]}, mode:"base",
+  const status = { engine: "paraformer", dataDirectory: "/Users/private-name/.dsh/private-data", base: {state:"ready",issues:[]},
+    parakeet:{state:"missing",issues:[]}, punctuation:{state:"missing",issues:[]},
+    native:{state:"ready",issues:[]}, mode:"base",
     preference:null, inheritedLegacy:false, selectedReady:true } as const;
   const rendered = text(ModelInstructions({ status, t: key => modelZh[key] }));
   expect(rendered).not.toContain("/Users/private-name");
