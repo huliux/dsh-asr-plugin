@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button, Tooltip } from "@deepseek-ai/dsh-client-ui-primitives";
 import type { AudioDeviceRpcEntry } from "../recording/rpc-contract.js";
 import type { PanelViewProps } from "./RecordingPanelView.js";
@@ -46,23 +46,42 @@ function Chevron() {
   </svg>;
 }
 
-function DeviceMenu({ devices, onChoose, onClose, selectedUID, track, translate }: {
-  readonly devices: readonly AudioDeviceRpcEntry[];
+/** The menu needs roughly this much room above the header before it flips below the control. */
+const MENU_CLEARANCE = 260;
+
+export function opensBelow(anchorTop: number, clearance = MENU_CLEARANCE): boolean {
+  return anchorTop < clearance;
+}
+
+function DeviceMenu({ anchor, devices, menuRef, onChoose, onClose, selectedUID, track, translate }: {
+  readonly anchor: HTMLElement | null;
+  readonly devices: readonly AudioDeviceRpcEntry[] | null;
+  readonly menuRef: React.RefObject<HTMLDivElement>;
   readonly onChoose: (uid: string) => void;
   readonly onClose: () => void;
   readonly selectedUID: string;
   readonly track: "mic" | "system";
   readonly translate: PanelViewProps["translate"];
 }) {
-  const options = devices.filter(device => track === "mic" ? device.input_channels > 0 : device.output_channels > 0);
+  const options = devices?.filter(device => track === "mic" ? device.input_channels > 0 : device.output_channels > 0);
+  const [below, setBelow] = useState(false);
+  // The panel floats near the bottom of the window, so the menu normally opens upwards;
+  // it flips below the control when there is not enough room above.
+  useLayoutEffect(() => {
+    if (anchor === null) return;
+    setBelow(opensBelow(anchor.getBoundingClientRect().top));
+  }, [anchor]);
   const item = (uid: string, name: string) => <button key={uid} type="button" role="menuitemradio"
     aria-checked={selectedUID === uid} className={styles.menuItem}
     onClick={() => { onChoose(uid); onClose(); }}>
     <span className={styles.menuCheck}>{selectedUID === uid ? "✓" : ""}</span>{name}
   </button>;
-  return <div className={styles.menu} role="menu" aria-label={translate(track === "mic" ? "panel.micDevice" : "panel.systemDevice")}>
+  return <div ref={menuRef} className={styles.menu} data-below={below ? "true" : undefined} role="menu"
+    aria-label={translate(track === "mic" ? "panel.micDevice" : "panel.systemDevice")}>
     {item("", translate("panel.deviceDefault"))}
-    {options.map(device => item(device.uid, device.name))}
+    {options === undefined
+      ? <span className={styles.menuEmpty} role="menuitem" aria-disabled="true">{translate("panel.devicesUnavailable")}</span>
+      : options.map(device => item(device.uid, device.name))}
   </div>;
 }
 
@@ -81,6 +100,7 @@ function TrackButton({ devices, pending, pendingAction, refreshDevices, run, sel
   const selectedUID = track === "mic" ? selectedDevices.mic : selectedDevices.system;
   const [open, setOpen] = useState(false);
   const group = useRef<HTMLDivElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
   const toggleMenu = useCallback(() => {
     setOpen(current => !current);
     void refreshDevices();
@@ -89,7 +109,9 @@ function TrackButton({ devices, pending, pendingAction, refreshDevices, run, sel
     if (!open) return undefined;
     const dismiss = (event: Event) => {
       if (event instanceof KeyboardEvent && event.key !== "Escape") return;
-      if (event instanceof MouseEvent && group.current?.contains(event.target as Node) === true) return;
+      const target = event.target as Node;
+      if (event instanceof MouseEvent && (group.current?.contains(target) === true
+        || menu.current?.contains(target) === true)) return;
       setOpen(false);
     };
     document.addEventListener("pointerdown", dismiss);
@@ -114,8 +136,9 @@ function TrackButton({ devices, pending, pendingAction, refreshDevices, run, sel
       aria-haspopup="menu" aria-expanded={open} onClick={toggleMenu}>
       <Chevron />
     </Button>
-    {open && <DeviceMenu devices={devices?.devices ?? []} selectedUID={selectedUID} track={track}
-      translate={translate} onChoose={chooseDevice} onClose={() => setOpen(false)} />}
+    {open && <DeviceMenu anchor={group.current} devices={devices?.devices ?? null} menuRef={menu}
+      selectedUID={selectedUID} track={track} translate={translate} onChoose={chooseDevice}
+      onClose={() => setOpen(false)} />}
   </div>;
 }
 
