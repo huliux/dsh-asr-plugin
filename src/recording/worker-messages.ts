@@ -123,9 +123,17 @@ function ready(value: unknown): RecordingWorkerReadyMessage {
   return message as unknown as RecordingWorkerReadyMessage;
 }
 
+function draftSpeakerLabel(value: unknown): string | null {
+  if (value === null) return null;
+  const label = string(value, 1, 32);
+  if (label !== "UNKNOWN" && !/^Speaker [A-Z]+$/u.test(label)) failure();
+  return label;
+}
+
 function segment(value: unknown, seq: number, audioThroughMs: number): RecordingDraftSegment {
   const item = exactRecord(value, ["seq", "start_ms", "end_ms", "speaker_label", "text"]);
-  if (safeInteger(item.seq, 0) !== seq || item.speaker_label !== null) failure();
+  if (safeInteger(item.seq, 0) !== seq) failure();
+  draftSpeakerLabel(item.speaker_label);
   const startMs = safeInteger(item.start_ms, 0, audioThroughMs);
   safeInteger(item.end_ms, startMs, audioThroughMs);
   const text = string(item.text, 1, MAX_SEGMENT_TEXT_LENGTH);

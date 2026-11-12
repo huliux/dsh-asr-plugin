@@ -12,7 +12,8 @@ export interface RecordingDraftSegment {
   readonly seq: number;
   readonly start_ms: number;
   readonly end_ms: number;
-  readonly speaker_label: null;
+  /** Live speaker label; null when the labeler has not decided for this segment. */
+  readonly speaker_label: string | null;
   readonly text: string;
 }
 
@@ -128,7 +129,8 @@ export interface DraftTranscriptSegment {
   readonly seq: number;
   readonly startMs: number;
   readonly endMs: number;
-  readonly speakerLabel: null;
+  /** Live speaker label; null until the labeler has enough audio to decide. */
+  readonly speakerLabel: string | null;
   readonly text: string;
 }
 

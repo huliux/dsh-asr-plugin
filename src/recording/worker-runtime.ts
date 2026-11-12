@@ -34,6 +34,7 @@ import {
   RecordingDraftResourceError,
 } from "./draft-engine.js";
 import { createRecordingDraftRecognizer } from "./draft-recognizer.js";
+import { createOnlineSpeakerLabeler } from "../diarization/online-labeler.js";
 import type { RecordingWorkerEntryConfig } from "./entry-config.js";
 import { openRecordingFinalCache } from "./final-cache.js";
 import { RecordingWorkerSchemaError } from "./worker-messages.js";
@@ -360,7 +361,7 @@ async function openRecordingRuntime(
     recognize: createRecordingDraftRecognizer(components.vad, {
       recognizer: components.recognizer, mode: components.mode,
       ...(components.punctuator === undefined ? {} : { punctuator: components.punctuator }),
-    }),
+    }, createOnlineSpeakerLabeler({ embedding: components.embeddingModel })),
   });
   const authoritative = createAuthoritativeEngine(components, chunks,
     await openRecordingFinalCache(join(workRecording, "authoritative-cache"), assets.engineFingerprint),

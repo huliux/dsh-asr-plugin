@@ -20,12 +20,12 @@ it("advances in five-second windows and supersedes by token timestamp midpoint",
   };
   const recognize = vi.fn()
     .mockResolvedValueOnce([
-      { startMs: 100, endMs: 1_000, text: "稳定前缀。", breakAfter: true },
-      { startMs: 2_000, endMs: 4_500, text: "旧尾段。", breakAfter: true },
+      { startMs: 100, endMs: 1_000, text: "稳定前缀。", breakAfter: true, speakerLabel: null },
+      { startMs: 2_000, endMs: 4_500, text: "旧尾段。", breakAfter: true, speakerLabel: null },
     ])
     .mockResolvedValueOnce([
-      { startMs: 100, endMs: 2_000, text: "不应覆盖。", breakAfter: true },
-      { startMs: 2_100, endMs: 7_500, text: "新尾段。", breakAfter: true },
+      { startMs: 100, endMs: 2_000, text: "不应覆盖。", breakAfter: true, speakerLabel: null },
+      { startMs: 2_100, endMs: 7_500, text: "新尾段。", breakAfter: true, speakerLabel: null },
     ]);
   let now = 10;
   const engine = new RecordingDraftEngine({
@@ -73,13 +73,38 @@ it("coalesces token units into bounded readable draft segments", async () => {
       read: async (_chunk, start, end) => new Float32Array(end - start),
     },
     recognize: async () => [
-      { startMs: 10, endMs: 100, text: "Hello", breakAfter: false },
-      { startMs: 100, endMs: 200, text: "world。", breakAfter: true },
+      { startMs: 10, endMs: 100, text: "Hello", breakAfter: false, speakerLabel: null },
+      { startMs: 100, endMs: 200, text: "world。", breakAfter: true, speakerLabel: null },
     ],
   });
 
   await expect(engine.nextRevision()).resolves.toMatchObject({
     segments: [{ seq: 0, start_ms: 10, end_ms: 200, text: "Hello world。" }],
+  });
+});
+
+it("carries the dominant live speaker label into the draft segment", async () => {
+  const timeline = buildRecordingTimeline([{
+    id: "mic-1",
+    track: "mic",
+    startUs: 1_000_000,
+    endUs: 6_000_000,
+    frameCount: 80_000,
+  }]);
+  const engine = new RecordingDraftEngine({
+    chunks: {
+      scan: async () => timeline,
+      read: async (_chunk, start, end) => new Float32Array(end - start),
+    },
+    recognize: async () => [
+      { startMs: 10, endMs: 100, text: "Hello", breakAfter: false, speakerLabel: "Speaker A" },
+      { startMs: 100, endMs: 200, text: "there", breakAfter: false, speakerLabel: "Speaker A" },
+      { startMs: 200, endMs: 300, text: "friend。", breakAfter: true, speakerLabel: "Speaker B" },
+    ],
+  });
+
+  await expect(engine.nextRevision()).resolves.toMatchObject({
+    segments: [{ seq: 0, speaker_label: "Speaker A", text: "Hello there friend。" }],
   });
 });
 
@@ -112,7 +137,7 @@ it("classifies an unbounded recognizer result as a terminal resource limit", asy
     endUs: 6_000_000,
     frameCount: 80_000,
   }]);
-  const unit = { startMs: 0, endMs: 1, text: "字", breakAfter: true };
+  const unit = { startMs: 0, endMs: 1, text: "字", breakAfter: true, speakerLabel: null };
   const engine = new RecordingDraftEngine({
     chunks: {
       scan: async () => timeline,

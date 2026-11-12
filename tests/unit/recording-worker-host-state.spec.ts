@@ -112,7 +112,7 @@ describe("RecordingWorkerHostState", () => {
       { ...revision, extra: true },
       { ...revision, revision: 1.5 },
       { ...revision, audio_through_ms: Number.MAX_SAFE_INTEGER + 1 },
-      { ...revision, segments: [{ ...revision.segments[0], speaker_label: "Speaker A" }] },
+      { ...revision, segments: [{ ...revision.segments[0], speaker_label: "speaker a" }] },
       { ...revision, segments: [{ ...revision.segments[0], text: "  " }] },
       { ...revision, segments: [{ ...revision.segments[0], seq: 1 }] },
       { ...revision, segments: [{ ...revision.segments[0], start_ms: 4_701 }] },
