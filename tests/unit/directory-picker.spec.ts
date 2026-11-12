@@ -26,7 +26,7 @@ function fake(options: { stdout?: string; stderr?: string; exitCode?: number; ti
           return {
             collected: {
               stdout: collected(options.stdout ?? ""), stderr: collected(options.stderr ?? ""),
-            } as SubprocessCollectedOutputs,
+            } as unknown as SubprocessCollectedOutputs,
             done: Promise.resolve(outcome),
             terminate() {},
             async waitForExit() { return options.timeout !== true; },

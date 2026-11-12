@@ -40,7 +40,8 @@ class FakeHandle implements SubprocessHandle {
   }
 }
 
-async function fixture(readyTimeoutMs = 2_000, terminationTimeoutMs = 2_000) {
+async function fixture(readyTimeoutMs = 2_000, terminationTimeoutMs = 2_000,
+  devices?: () => { readonly mic: string; readonly system: string }) {
   const root = await mkdtemp(join(tmpdir(), "recording-helper-client-"));
   roots.push(root);
   const sessionRoot = join(root, "meetings", MEETING_ID);
@@ -66,6 +67,7 @@ async function fixture(readyTimeoutMs = 2_000, terminationTimeoutMs = 2_000) {
     readyTimeoutMs,
     subprocess,
     terminationTimeoutMs,
+    ...(devices === undefined ? {} : { devices }),
   });
   return { client, handle, layout, sessionRoot, spawnSpec: () => spawnSpec };
 }
@@ -331,4 +333,25 @@ it("invalidates tracks when LaunchServices exits without a helper terminal event
     mic: { requested: true, state: "failed", errorCode: "HELPER_PROCESS_ERROR" },
     system: { requested: true, state: "failed", errorCode: "HELPER_PROCESS_ERROR" },
   });
+});
+
+it("passes the configured capture devices after the Host pid", async () => {
+  const value = await fixture(2_000, 2_000, () => ({
+    mic: "AppleUSBAudioEngine:Insta360:Insta360 Link 2C:144000:3", system: "BuiltInSpeakerDevice",
+  }));
+  await ready(value);
+  expect(value.spawnSpec()?.argv.slice(-3)).toEqual(["777",
+    "AppleUSBAudioEngine:Insta360:Insta360 Link 2C:144000:3", "BuiltInSpeakerDevice"]);
+});
+
+it("sends a default marker for a device that is not configured", async () => {
+  const value = await fixture(2_000, 2_000, () => ({ mic: "", system: "BuiltInSpeakerDevice" }));
+  await ready(value);
+  expect(value.spawnSpec()?.argv.slice(-2)).toEqual(["-", "BuiltInSpeakerDevice"]);
+});
+
+it("omits device arguments when no device is configured", async () => {
+  const value = await fixture(2_000, 2_000, () => ({ mic: " ", system: "" }));
+  await ready(value);
+  expect(value.spawnSpec()?.argv).toHaveLength(8);
 });

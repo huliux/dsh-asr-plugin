@@ -268,6 +268,14 @@ static NSError *RHSessionError(NSInteger code, NSString *message) {
   return requested > 0 && failed == requested;
 }
 
+- (BOOL)selectDeviceUID:(NSString *)deviceUID forTrack:(NSString *)track {
+  RHCaptureTrack *target = [track isEqualToString:@"mic"] ? self.mic
+      : [track isEqualToString:@"system"] ? self.system : nil;
+  if (target == nil) return NO;
+  target.deviceUID = deviceUID.length == 0 ? nil : deviceUID;
+  return YES;
+}
+
 - (BOOL)run {
   return [self runUntil:^BOOL { return NO; }];
 }

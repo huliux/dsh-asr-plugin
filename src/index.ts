@@ -251,6 +251,13 @@ export async function apply(context: Context, config: ParsedConfig): Promise<voi
       packageRoot: PACKAGE_ROOT,
       runtimeAssets,
       subprocess: context.subprocess,
+      devices: () => {
+        const current = effectiveConfig<ParsedConfig>(context);
+        return {
+          mic: readVolatile<string>(current.mic_device_uid) ?? "",
+          system: readVolatile<string>(current.system_device_uid) ?? "",
+        };
+      },
     });
     const models = new RecordingModelWorker({ spawner: createDshWorkerSpawner(context.subprocess),
       meetingsRoot: paths.managedAudioDirectory, workRoot: join(paths.dataRoot, "work") });
@@ -293,7 +300,8 @@ export async function apply(context: Context, config: ParsedConfig): Promise<voi
       webContext.jobs.attachController("dsh-asr-recording-web");
       const removeRpc = registerRecordingHostRpc(connection, application, signal => readModelSettings(
         { dataRoot: paths.dataRoot, packageRoot: PACKAGE_ROOT, engine: selectedEngine(context), signal },
-      ), downloads, recording.permissions, signal => application.prepareRecording(signal), transcripts);
+      ), downloads, recording.permissions, signal => application.prepareRecording(signal), transcripts,
+      recording.devices);
       webContext.effect(() => removeRpc, "dsh-asr: recording client RPC");
     });
   } catch (error) {

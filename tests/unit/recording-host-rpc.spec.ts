@@ -215,3 +215,29 @@ it("prepares recording models without accepting paths or recording audio", async
   expect(await handler("models/prepare", { model_root: "/other" }, signal)).toMatchObject({ ok: false });
   expect(prepare).toHaveBeenCalledExactlyOnceWith(signal);
 });
+
+it("lists audio devices without accepting device paths or helper arguments", async () => {
+  let handler!: Parameters<RecordingRpcConnection["rpc"]["handle"]>[1];
+  const devices = { list: vi.fn(async () => ({
+    defaultInputUID: "AppleUSBAudioEngine:Insta360:Insta360 Link 2C:144000:3",
+    defaultOutputUID: null,
+    devices: [{ uid: "AppleUSBAudioEngine:Insta360:Insta360 Link 2C:144000:3", name: "Insta360 Link 2C",
+      inputChannels: 1, outputChannels: 0, defaultInput: true, defaultOutput: false }],
+  })) };
+  registerRecordingHostRpc({ rpc: { handle: (_channel, value) => {
+    handler = value; return async () => {};
+  } } }, { getRecordingState: () => null } as unknown as MeetingApplication,
+  undefined, undefined, undefined, undefined, undefined, devices);
+  const signal = new AbortController().signal;
+  expect(await handler("devices/list", {}, signal)).toEqual({ ok: true, value: {
+    default_input_uid: "AppleUSBAudioEngine:Insta360:Insta360 Link 2C:144000:3",
+    default_output_uid: null,
+    devices: [{ uid: "AppleUSBAudioEngine:Insta360:Insta360 Link 2C:144000:3", name: "Insta360 Link 2C",
+      input_channels: 1, output_channels: 0, default_input: true, default_output: false }],
+  } });
+  expect(devices.list).toHaveBeenCalledExactlyOnceWith(signal);
+  for (const payload of [{ uid: "BuiltInMicrophoneDevice" }, { argv: ["__devices"] }]) {
+    expect(await handler("devices/list", payload, signal)).toMatchObject({ ok: false });
+  }
+  expect(devices.list).toHaveBeenCalledOnce();
+});

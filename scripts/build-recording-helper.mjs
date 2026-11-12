@@ -251,6 +251,7 @@ async function build() {
     resolve(appSourceRoot, "RHRecordingSession.m"),
     resolve(appSourceRoot, "RHPermissions.m"),
     resolve(appSourceRoot, "RHSystemAudioProbe.m"),
+    resolve(appSourceRoot, "RHDevices.m"),
     resolve(appSourceRoot, "main.m"),
   ], ["Foundation", "AVFoundation", "CoreAudio", "AudioToolbox"]);
   compileObjectiveC(protocolTestBinary, [

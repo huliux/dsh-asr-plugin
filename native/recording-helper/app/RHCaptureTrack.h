@@ -15,6 +15,8 @@ typedef void (^RHTrackStateHandler)(NSDictionary<NSString *, id> *snapshot);
 @property(nonatomic, readonly) NSString *name;
 @property(nonatomic, readonly) pid_t processID;
 @property(nonatomic, readonly, getter=isRequested) BOOL requested;
+/** CoreAudio UID of the device to capture; nil or empty keeps the macOS default. */
+@property(nonatomic, copy, nullable) NSString *deviceUID;
 @property(nonatomic, readonly) NSString *state;
 - (nullable instancetype)initWithName:(NSString *)name
                         recordingRoot:(NSString *)recordingRoot

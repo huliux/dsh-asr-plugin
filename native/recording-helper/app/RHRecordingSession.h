@@ -17,6 +17,11 @@ typedef RHMicrophoneAuthorization (^RHMicrophoneAuthorizer)(void);
                         microphoneAuthorizer:(RHMicrophoneAuthorizer)microphoneAuthorizer
                                         error:(NSError **)error;
 - (BOOL)run;
+/**
+ * Pins a track to a CoreAudio device UID. An empty string keeps the macOS
+ * default; the tracks are started later, so this must happen before `run`.
+ */
+- (BOOL)selectDeviceUID:(nullable NSString *)deviceUID forTrack:(NSString *)track;
 - (BOOL)runUntil:(BOOL (^)(void))shouldStop;
 @end
 

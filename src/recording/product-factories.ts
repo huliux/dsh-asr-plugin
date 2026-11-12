@@ -13,7 +13,8 @@ import {
   WORKER_TERMINATION_GRACE_MS,
   WORKER_TERMINATION_TIMEOUT_MS,
 } from "../worker/timeouts.js";
-import { RecordingHelperClient, type RecordingHelperSubprocess } from "./helper-client.js";
+import { RecordingHelperClient, type RecordingHelperCaptureDevices, type RecordingHelperSubprocess } from "./helper-client.js";
+import { createAudioDeviceService, type AudioDeviceService } from "./audio-devices.js";
 import { createPackagedRecordingWorkerLaunch } from "./launch.js";
 import type {
   RecordingSessionHelperFactory,
@@ -32,6 +33,8 @@ export interface ProductRecordingFactoriesOptions {
   readonly packageRoot: string;
   readonly runtimeAssets: () => Promise<ResolvedRuntimeAssets>;
   readonly subprocess: DshSubprocessPort & RecordingHelperSubprocess;
+  /** Live capture device selection; empty uids mean the macOS defaults. */
+  readonly devices?: () => RecordingHelperCaptureDevices;
 }
 
 function createHelperFactory(
@@ -52,6 +55,7 @@ function createHelperFactory(
         readyTimeoutMs: HELPER_READY_TIMEOUT_MS,
         subprocess: options.subprocess,
         terminationTimeoutMs: WORKER_TERMINATION_TIMEOUT_MS,
+        ...(options.devices === undefined ? {} : { devices: options.devices }),
       });
     })().catch((error) => {
       pending = undefined;
@@ -108,16 +112,18 @@ export function createProductRecordingFactories(options: ProductRecordingFactori
   readonly helper: RecordingSessionHelperFactory;
   readonly worker: RecordingSessionWorkerFactory;
   readonly permissions: RecordingPermissionsService;
+  readonly devices: AudioDeviceService;
   readonly checkPermissions: (signal?: AbortSignal) => Promise<void>;
 } {
-  const permissions = new RecordingPermissionsService({ subprocess: options.subprocess,
-    resolveApp: async () => (await verifyRecordingHelperAssets({
-      ...packagedRecordingHelperLayout(options.packageRoot), inspectSignature: options.inspectHelperSignature,
-    })).appRoot });
+  const resolveApp = async () => (await verifyRecordingHelperAssets({
+    ...packagedRecordingHelperLayout(options.packageRoot), inspectSignature: options.inspectHelperSignature,
+  })).appRoot;
+  const permissions = new RecordingPermissionsService({ subprocess: options.subprocess, resolveApp });
   return {
     helper: createHelperFactory(options),
     worker: createWorkerFactory(options),
     permissions,
+    devices: createAudioDeviceService({ resolveApp, subprocess: options.subprocess }),
     checkPermissions: signal => permissions.require(signal),
   };
 }

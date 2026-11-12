@@ -1,5 +1,6 @@
 #import <Foundation/Foundation.h>
 
+#import "RHDevices.h"
 #import "RHPermissions.h"
 #import "RHProcessRegistry.h"
 #import "RHRecordingSession.h"
@@ -39,6 +40,16 @@ static NSString *RHValidateSessionRoot(NSString *input, NSString *meetingID) {
   return canonical;
 }
 
+static NSString *const RHDefaultDeviceMarker = @"-";
+static const NSUInteger RH_MAX_DEVICE_UID_LENGTH = 512;
+
+static NSString *_Nullable RHOptionalDeviceUID(const char *raw) {
+  if (raw == NULL) return nil;
+  NSString *value = [NSString stringWithUTF8String:raw];
+  if (value == nil) return nil;
+  return [value isEqualToString:RHDefaultDeviceMarker] ? @"" : value;
+}
+
 static NSString *RHUnsignedArgument(unsigned long long value) {
   return [NSString stringWithFormat:@"%llu", value];
 }
@@ -68,11 +79,15 @@ static NSTask *RHStartWatchdog(NSString *controlRoot,
 
 static int RHRunProductSession(NSString *root,
                                NSString *meetingID,
-                               RHProcessIdentity hostIdentity) {
+                               RHProcessIdentity hostIdentity,
+                               NSString *micDeviceUID,
+                               NSString *systemDeviceUID) {
   NSString *binaryRoot = [NSBundle.mainBundle.bundlePath
       stringByAppendingPathComponent:@"Contents/Helpers"];
   NSString *canonicalBinaryRoot = RHCanonicalPath(binaryRoot);
   if (canonicalBinaryRoot == nil) return 70;
+  if (micDeviceUID.length > RH_MAX_DEVICE_UID_LENGTH ||
+      systemDeviceUID.length > RH_MAX_DEVICE_UID_LENGTH) return 64;
   NSError *error = nil;
   RHRecordingSession *session = [[RHRecordingSession alloc]
       initWithSessionRoot:root meetingID:meetingID binaryRoot:canonicalBinaryRoot
@@ -80,6 +95,8 @@ static int RHRunProductSession(NSString *root,
         return RHRequestMicrophoneAuthorization(120.0);
       } error:&error];
   if (session == nil) return 70;
+  if (![session selectDeviceUID:micDeviceUID forTrack:@"mic"] ||
+      ![session selectDeviceUID:systemDeviceUID forTrack:@"system"]) return 64;
   NSString *controlRoot = [root stringByAppendingPathComponent:@"control"];
   RHProcessIdentity helperIdentity = {};
   if (!RHReadProcessIdentity(NSProcessInfo.processInfo.processIdentifier, &helperIdentity)) return 70;
@@ -133,15 +150,31 @@ int main(int argc, const char *argv[]) {
                            [NSString stringWithUTF8String:argv[8]],
                            [NSString stringWithUTF8String:argv[9]]);
     }
-    if (argc != 4) return 64;
+    if (argc == 2 && strcmp(argv[1], "__devices") == 0) {
+      NSError *error = nil;
+      NSData *payload = [RHReadAudioDeviceInventory() jsonDataWithError:&error];
+      if (payload == nil) return 70;
+      NSFileHandle *output = NSFileHandle.fileHandleWithStandardOutput;
+      [output writeData:payload];
+      [output writeData:[@"\n" dataUsingEncoding:NSUTF8StringEncoding]];
+      return 0;
+    }
+    if (argc != 4 && argc != 6) return 64;
     NSString *meetingID = [NSString stringWithUTF8String:argv[2]];
     NSString *root = RHValidateSessionRoot([NSString stringWithUTF8String:argv[1]], meetingID);
     unsigned long long hostProcessID = 0;
     RHProcessIdentity hostIdentity = {};
     if (root == nil || !RHParseUnsigned(argv[3], 2, INT_MAX, &hostProcessID) ||
         !RHReadProcessIdentity((pid_t)hostProcessID, &hostIdentity)) return 64;
+    NSString *micDeviceUID = nil;
+    NSString *systemDeviceUID = nil;
+    if (argc == 6) {
+      micDeviceUID = RHOptionalDeviceUID(argv[4]);
+      systemDeviceUID = RHOptionalDeviceUID(argv[5]);
+      if (micDeviceUID == nil || systemDeviceUID == nil) return 64;
+    }
     signal(SIGTERM, RHHandleStop);
     signal(SIGINT, RHHandleStop);
-    return RHRunProductSession(root, meetingID, hostIdentity);
+    return RHRunProductSession(root, meetingID, hostIdentity, micDeviceUID, systemDeviceUID);
   }
 }

@@ -9,6 +9,12 @@ import {
 
 import type { ClientConnectionRpc } from "@deepseek-ai/dsh-client-connection/client";
 import type { ConfigForm } from "@deepseek-ai/dsh-client-ui-settings/client";
+import type { AudioDeviceInventoryRpc } from "../recording/rpc-contract.js";
+
+function recordOrEmpty(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown> : {};
+}
 
 import type {
   RecordingRpcControlPayload,
@@ -222,12 +228,30 @@ export function RecordingPanel(props: RecordingPanelProps) {
   );
   const configSnapshot = useCallback(() => settings?.getSnapshot() ?? null, [settings]);
   const settingsSnapshot = useSyncExternalStore(configSubscribe, configSnapshot);
+  const [devices, setDevices] = useState<AudioDeviceInventoryRpc | null>(null);
+  const refreshDevices = useCallback(async () => {
+    try { setDevices(await client.listDevices()); }
+    catch { setDevices(null); }
+  }, [client]);
+  useEffect(() => { void refreshDevices(); }, [refreshDevices]);
+  const selectDevice = useCallback(async (track: "mic" | "system", uid: string) => {
+    const current = settings?.getSnapshot();
+    if (settings === undefined || current === null || current === undefined) return;
+    await settings.mutate([{ op: "set", path: [track === "mic" ? "mic_device_uid" : "system_device_uid"], value: uid }],
+      current.revision);
+  }, [settings]);
+  const configValues = recordOrEmpty(settingsSnapshot?.value);
+  const selectedDevices = useMemo(() => ({
+    mic: typeof configValues.mic_device_uid === "string" ? configValues.mic_device_uid : "",
+    system: typeof configValues.system_device_uid === "string" ? configValues.system_device_uid : "",
+  }), [configValues]);
   const exportTranscript = useTranscriptExport({
     client, mounted: snapshot.mounted, setError: snapshot.setError, setNotice: setExportNotice,
     setPending, settings, translate, view: snapshot.view,
   });
   const failure = snapshot.error ?? trackError(snapshot.view);
-  return <RecordingPanelView exportNotice={exportNotice} exportTranscript={exportTranscript}
+  return <RecordingPanelView devices={devices} exportNotice={exportNotice} exportTranscript={exportTranscript}
+    refreshDevices={refreshDevices} selectDevice={selectDevice} selectedDevices={selectedDevices}
     failure={failure} join={join} pending={pendingAction !== null} pendingAction={pendingAction}
     hasRecordingHistory={snapshot.hasRecordingHistory} prepare={prepare}
     preview={snapshot.preview} run={run} settings={settings} settingsRevision={settingsSnapshot?.revision}

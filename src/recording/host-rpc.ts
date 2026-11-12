@@ -2,6 +2,7 @@ import type { ModelDownloadControl } from "../assets/model-download-contract.js"
 import type { ModelSettingsStatus } from "../assets/model-settings-contract.js";
 import type { RecordingPermissionControl } from "./permission-contract.js";
 import type { TranscriptExportControl } from "../transcripts/transcript-export-contract.js";
+import type { AudioDeviceService } from "./audio-devices.js";
 import type { MeetingApplication } from "../application/meeting-application.js";
 import type { MeetingReferenceCandidate } from "../application/meeting-reference.js";
 import type { RecordingControlInput } from "../application/recording-application.js";
@@ -132,6 +133,7 @@ export function registerRecordingHostRpc(
   permissions?: RecordingPermissionControl,
   prepareModels?: (signal: AbortSignal) => Promise<void>,
   transcripts?: TranscriptExportControl,
+  devices?: AudioDeviceService,
 ): () => Promise<void> {
   return connection.rpc.handle(RECORDING_RPC_CHANNEL, async (endpoint, payload, signal) => {
     try {
@@ -173,6 +175,25 @@ export function registerRecordingHostRpc(
       if (endpoint === "models/status" && modelStatus !== undefined) {
         emptyPayload(payload);
         return { ok: true, value: await modelStatus(signal) };
+      }
+      if (endpoint === "devices/list" && devices !== undefined) {
+        emptyPayload(payload);
+        const inventory = await devices.list(signal);
+        return {
+          ok: true,
+          value: {
+            default_input_uid: inventory.defaultInputUID,
+            default_output_uid: inventory.defaultOutputUID,
+            devices: inventory.devices.map((device) => ({
+              uid: device.uid,
+              name: device.name,
+              input_channels: device.inputChannels,
+              output_channels: device.outputChannels,
+              default_input: device.defaultInput,
+              default_output: device.defaultOutput,
+            })),
+          },
+        };
       }
       if (endpoint === "state") {
         emptyPayload(payload);

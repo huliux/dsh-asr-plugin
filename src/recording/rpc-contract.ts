@@ -15,6 +15,7 @@ export const RECORDING_RPC_ENDPOINTS = [
   "permissions/status",
   "permissions/test",
   "permissions/open-settings",
+  "devices/list",
   "transcripts/export",
   "transcripts/choose-directory",
 ] as const;
@@ -119,7 +120,22 @@ export interface MeetingReferenceRpcResolvePayload {
   readonly meeting_id: string;
 }
 
-export type RecordingRpcValue = RecordingPermissions | null | ModelDownloadStatus | ModelSettingsStatus | RecordingRpcStateValue | RecordingRpcView | TranscriptExportRpcValue | string
+export interface AudioDeviceRpcEntry {
+  readonly uid: string;
+  readonly name: string;
+  readonly input_channels: number;
+  readonly output_channels: number;
+  readonly default_input: boolean;
+  readonly default_output: boolean;
+}
+
+export interface AudioDeviceInventoryRpc {
+  readonly default_input_uid: string | null;
+  readonly default_output_uid: string | null;
+  readonly devices: readonly AudioDeviceRpcEntry[];
+}
+
+export type RecordingRpcValue = RecordingPermissions | null | ModelDownloadStatus | ModelSettingsStatus | RecordingRpcStateValue | RecordingRpcView | TranscriptExportRpcValue | AudioDeviceInventoryRpc | string
   | readonly MeetingReferenceRpcCandidate[] | MeetingReferenceRpcCandidate;
 
 export type RecordingRpcResult<T = RecordingRpcValue> =

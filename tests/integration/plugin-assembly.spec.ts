@@ -143,7 +143,7 @@ describe("DSH 插件基础装配", () => {
     expect(plugin.Config({ data_dir: "/isolated", punctuation_enabled: false }).punctuation_enabled.get()).toBe(false);
     expect(plugin.name).toBe("dsh-asr");
     expect(plugin.inject).toEqual(["tools", "jobs", "subprocess"]);
-    expect(Object.keys(plugin.Config.dict ?? {}).sort()).toEqual(["asr_engine", "data_dir", "hf_download_route", "hf_proxy_kind", "hf_proxy_url", "punctuation_enabled"]);
+    expect(Object.keys(plugin.Config.dict ?? {}).sort()).toEqual(["asr_engine", "data_dir", "hf_download_route", "hf_proxy_kind", "hf_proxy_url", "mic_device_uid", "punctuation_enabled", "system_device_uid", "transcript_directory"]);
   });
 
 

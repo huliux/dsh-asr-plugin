@@ -20,6 +20,20 @@
 .panel button { padding: 0; border-radius: 8px; }
 .panel button:focus-visible { outline: 2px solid var(--dsw-alias-label-primary); outline-offset: -2px; }
 .control { width: 36px; min-width: 24px; height: 36px; flex-shrink: 1; }
+.split { display: inline-flex; align-items: center; position: relative; flex-shrink: 1; min-width: 0; }
+.splitMain { width: 32px; min-width: 22px; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.caret { width: 16px; min-width: 12px; height: 36px; color: var(--dsw-alias-label-tertiary); border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.caret:hover, .caretOpen { color: var(--dsw-alias-label-primary); }
+.caretIcon { display: block; }
+.menu { position: absolute; z-index: 10; bottom: calc(100% + 6px); left: 0; display: flex; flex-direction: column;
+  min-width: 180px; max-width: 260px; max-height: 240px; overflow: auto; padding: 4px; box-sizing: border-box;
+  border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; background: var(--dsw-alias-settings-card-fill);
+  box-shadow: 0 6px 20px -4px rgb(0 0 0 / 12%); }
+.menuItem { display: flex; align-items: center; gap: 6px; width: 100%; padding: 6px 8px; border-radius: 6px;
+  background: transparent; color: var(--dsw-alias-label-primary); font-size: 12px; line-height: 18px;
+  text-align: left; overflow-wrap: anywhere; }
+.menuItem:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.menuCheck { display: inline-block; width: 10px; color: var(--dsw-alias-label-primary); }
 .mainControl { width: 60px; min-width: 48px; height: 36px; flex-shrink: 0; gap: 6px; }
 .move { width: 16px; min-width: 12px; height: 36px; cursor: grab; touch-action: none; color: var(--dsw-alias-label-tertiary); }
 .move:active { cursor: grabbing; }

@@ -31,6 +31,13 @@ export interface RecordingHelperSubprocess {
   spawn(spec: SubprocessSpawnSpec): SubprocessHandle;
 }
 
+export interface RecordingHelperCaptureDevices {
+  /** CoreAudio UID for the microphone track; empty means the macOS default. */
+  readonly mic: string;
+  /** CoreAudio UID for the system tap; empty means the macOS default. */
+  readonly system: string;
+}
+
 export interface RecordingHelperClientOptions {
   readonly appRoot: string;
   readonly commandTimeoutMs: number;
@@ -38,6 +45,8 @@ export interface RecordingHelperClientOptions {
   readonly readyTimeoutMs: number;
   readonly subprocess: RecordingHelperSubprocess;
   readonly terminationTimeoutMs: number;
+  /** Live device selection; read per recording so a panel change needs no restart. */
+  readonly devices?: () => RecordingHelperCaptureDevices;
 }
 
 export class RecordingHelperClientError extends Error {
@@ -388,6 +397,22 @@ class ActiveRecordingHelperSession implements RecordingHelperSession {
   }
 }
 
+const DEFAULT_DEVICE_MARKER = "-";
+
+/**
+ * The helper accepts an optional mic/system device pair after the Host pid.
+ * Both uids are always sent together so the helper never has to guess which
+ * positional argument a lone uid belongs to.
+ */
+function captureDeviceArguments(devices: RecordingHelperCaptureDevices | undefined): string[] {
+  if (devices === undefined) return [];
+  const mic = devices.mic.trim();
+  const system = devices.system.trim();
+  if (mic.length === 0 && system.length === 0) return [];
+  return [mic.length === 0 ? DEFAULT_DEVICE_MARKER : mic,
+    system.length === 0 ? DEFAULT_DEVICE_MARKER : system];
+}
+
 export class RecordingHelperClient implements RecordingSessionHelperFactory {
   constructor(private readonly options: RecordingHelperClientOptions) {
     assertOptions(options);
@@ -404,6 +429,7 @@ export class RecordingHelperClient implements RecordingSessionHelperFactory {
       argv: [
         "/usr/bin/open", "-n", "-W", this.options.appRoot, "--args",
         sessionRoot, input.meetingId, String(this.options.hostProcessId),
+        ...captureDeviceArguments(this.options.devices?.()),
       ],
       cwd: dirname(this.options.appRoot),
       stdio: {

@@ -145,7 +145,7 @@ static const NSTimeInterval RHTrackStartTimeout = 120.0;
 
 - (NSArray<NSString *> *)captureArguments {
   NSString *source = [self.name isEqualToString:@"mic"] ? @"microphone" : @"system-audio";
-  return @[
+  NSMutableArray<NSString *> *arguments = [@[
     @"--chunk-size", @"5",
     @"--mode", @"audio-capture",
     @"--recording-source", source,
@@ -153,7 +153,13 @@ static const NSTimeInterval RHTrackStartTimeout = 120.0;
     @"--default-log-file", @"/dev/null",
     @"--env", @"prod",
     @"--temp-dir", [self.recordingRoot stringByAppendingPathComponent:@"native-temp"],
-  ];
+  ] mutableCopy];
+  // Only microphone capture honours a device pin today; the system tap follows
+  // the aggregate output device, so no flag is added for that track.
+  if ([self.name isEqualToString:@"mic"] && self.deviceUID.length > 0) {
+    [arguments addObjectsFromArray:@[@"--device-uid", self.deviceUID]];
+  }
+  return arguments;
 }
 
 - (BOOL)systemAudioAvailable {

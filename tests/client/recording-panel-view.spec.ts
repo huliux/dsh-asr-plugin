@@ -1,7 +1,14 @@
 import { isValidElement, useEffect, type ReactNode } from "react";
 import { expect, it, vi } from "vitest";
 
-vi.mock("react", async importOriginal => ({ ...await importOriginal<typeof import("react")>(), useEffect: vi.fn() }));
+// The view is invoked as a plain function here, so stateful hooks need stubs.
+vi.mock("react", async importOriginal => ({
+  ...await importOriginal<typeof import("react")>(),
+  useCallback: (callback: unknown) => callback,
+  useEffect: vi.fn(),
+  useRef: (value: unknown) => ({ current: value }),
+  useState: (value: unknown) => [value, vi.fn()],
+}));
 
 vi.mock("@deepseek-ai/dsh-client-ui-primitives", () => ({
   Button: () => null, Tooltip: () => null, StateDot: () => null,
@@ -15,6 +22,14 @@ vi.mock("../../src/client/use-recording-panel-layout.js", () => ({
 
 import { RecordingPanelView } from "../../src/client/RecordingPanelView.js";
 import { en, zh } from "../../src/client/meeting-reference-locales.js";
+
+const deviceProps = {
+  devices: null,
+  refreshDevices: vi.fn(),
+  selectDevice: vi.fn(),
+  selectedDevices: { mic: "", system: "" },
+};
+
 
 function alertText(node: ReactNode): ReactNode {
   if (Array.isArray(node)) return node.map(alertText).find(value => value !== undefined);
@@ -36,7 +51,7 @@ function renderedText(node: ReactNode): string {
 it.each([zh, en])("renders actionable no-signal copy without asserting permission denial", locale => {
   const result = RecordingPanelView({ hasRecordingHistory: false, failure: "SYSTEM_AUDIO_NO_SIGNAL",
     join: vi.fn(), pending: false, pendingAction: null, preview: [], run: vi.fn(), view: null,
-    translate: key => locale[key] });
+    translate: key => locale[key], ...deviceProps });
   expect(alertText(result)).not.toBe("SYSTEM_AUDIO_NO_SIGNAL");
   expect(alertText(result)).toContain(locale === zh ? "播放" : "playback");
   expect(alertText(result)).toContain(locale === zh ? "系统设置" : "System Settings");
@@ -52,7 +67,7 @@ it.each([zh, en])("shows both track problems instead of hiding system recovery b
       system: { state: "on", requested: true, errorCode: "SYSTEM_AUDIO_NO_SIGNAL" }, phase: "recording",
       recordingEndedAtMs: null, recordingElapsedMs: 27_000, recordingStartedAtMs: 0,
       durationMs: null, resultStatus: null, transcriptVersion: null },
-    translate: key => locale[key] });
+    translate: key => locale[key], ...deviceProps });
   const text = JSON.stringify(alertText(result));
   expect(text).toContain(locale["panel.micDenied"]);
   expect(text).toContain(locale["panel.systemNoSignal"]);
@@ -63,7 +78,7 @@ it.each([zh, en])("uses user language for model, worker and unknown errors", loc
   for (const code of ["MODEL_NOT_READY", "WORKER_PROTOCOL_ERROR", "HELPER_READY_TIMEOUT", "SOME_NEW_ERROR"]) {
     const result = RecordingPanelView({ hasRecordingHistory: false, failure: code,
       join: vi.fn(), pending: false, pendingAction: null, preview: [], run: vi.fn(), view: null,
-      translate: key => locale[key] });
+      translate: key => locale[key], ...deviceProps });
     expect(alertText(result)).not.toContain(code);
     expect(alertText(result)).toMatch(locale === zh ? /模型|组件|重试/ : /models|component|retry/i);
   }
@@ -71,7 +86,8 @@ it.each([zh, en])("uses user language for model, worker and unknown errors", loc
 
 it.each([zh, en])("separates stopping capture from final transcript processing", locale => {
   const props = { hasRecordingHistory: false, failure: null, join: vi.fn(), pending: true,
-    pendingAction: "stop" as const, preview: [], run: vi.fn(), translate: (key: keyof typeof zh) => locale[key] };
+    pendingAction: "stop" as const, preview: [], run: vi.fn(), translate: (key: keyof typeof zh) => locale[key],
+    devices: null, refreshDevices: vi.fn(), selectDevice: vi.fn(), selectedDevices: { mic: "", system: "" } };
   const recording = { draftRevision: 0, draftStale: false, errorCode: null, finalizationMs: null, jobId: "job",
     latestAudioAtMs: null, latestDraftAtMs: null, meetingId: "meeting", mic: { state: "on" as const, requested: true, errorCode: null },
     system: { state: "on" as const, requested: true, errorCode: null }, phase: "finalizing" as const,
@@ -86,7 +102,8 @@ it.each([zh, en])("separates stopping capture from final transcript processing",
 it("prepares models only when expanded and cancels the wait on unmount", async () => {
   const prepare = vi.fn(async (_signal: AbortSignal) => {});
   const props = { hasRecordingHistory: false, failure: null, join: vi.fn(), pending: false,
-    pendingAction: null, preview: [], run: vi.fn(), view: null, translate: (key: keyof typeof zh) => zh[key], prepare };
+    pendingAction: null, preview: [], run: vi.fn(), view: null, translate: (key: keyof typeof zh) => zh[key], prepare,
+    devices: null, refreshDevices: vi.fn(), selectDevice: vi.fn(), selectedDevices: { mic: "", system: "" } };
   vi.mocked(useEffect).mockClear();
   layoutState.expanded = false;
   try {
