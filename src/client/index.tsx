@@ -87,6 +87,7 @@ export function apply(ctx: ClientContext): void {
     locale={ctx.locale}
     references={references}
     rpc={connection.rpc}
+    settings={ctx.configForms.get<Record<string, unknown>>("dsh-asr")}
     translate={translate}
   />));
 }

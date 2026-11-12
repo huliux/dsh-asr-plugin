@@ -6,6 +6,8 @@ import type { RecordingRpcControlPayload, RecordingRpcSegment, RecordingRpcView 
 import { durationClock } from "./meeting-reference-source.js";
 import type { RecordingPendingAction, Translate } from "./RecordingPanel.js";
 import { RecordingControls, RecordingIcon } from "./RecordingPanelControls.js";
+import type { ConfigForm } from "@deepseek-ai/dsh-client-ui-settings/client";
+import { RecognizerSelect } from "./RecognizerSelect.js";
 import { useRecordingPanelLayout } from "./use-recording-panel-layout.js";
 import styles from "./RecordingPanel.module.css";
 
@@ -18,6 +20,8 @@ export interface PanelViewProps {
   readonly pendingAction: RecordingPendingAction;
   readonly preview: readonly RecordingRpcSegment[];
   readonly run: (payload: RecordingRpcControlPayload) => Promise<void>;
+  readonly settings?: ConfigForm<Record<string, unknown>> | undefined;
+  readonly settingsRevision?: number | undefined;
   readonly translate: Translate;
   readonly view: RecordingRpcView | null;
 }
@@ -115,6 +119,7 @@ export function RecordingPanelView(props: PanelViewProps) {
       <Button className={styles.move} aria-label={translate("panel.move")} {...layout.move}><RecordingIcon name="grip" /></Button>
       <RecordingControls {...props} />
       <span className={styles.spacer} />
+      <RecognizerSelect revision={props.settingsRevision} settings={props.settings} translate={translate} />
       {failure !== null && <Tooltip label={failure}>
         <Button size="sm" className={`${styles.errorControl} ${noSignal ? styles.noSignal : ""}`} aria-label={failure}
           icon={<IconWarningOutlineRegular />} onClick={() => !layout.expanded && layout.toggle()} />

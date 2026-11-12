@@ -42,6 +42,10 @@
 .chip { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 8px; background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-secondary); font-size: 11px; line-height: 17px; }
 .chip.warning { color: var(--dsw-alias-state-warn-label); }
 .body > .error { margin: 8px 16px 0; }
+.recognizer { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.recognizerLabel { color: var(--dsw-alias-label-secondary); font-size: 11px; line-height: 17px; white-space: nowrap; }
+.recognizerSelect { height: 22px; padding: 0 4px; border: 1px solid var(--dsw-alias-interactive-border); border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 11px; font-family: inherit; }
+.recognizerSelect:disabled { opacity: 0.5; }
 .hint, .segmentMeta { color: var(--dsw-alias-label-secondary); font-size: 11px; line-height: 17px; font-variant-numeric: tabular-nums; }
 .hint.warning { color: var(--dsw-alias-state-warn-label); }
 .preview { display: flex; flex: 1; flex-direction: column; min-height: 80px; padding: 16px; }
