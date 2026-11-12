@@ -1,7 +1,9 @@
 import { expect, it } from "vitest";
 
 import { createProcessingIdentity, parseProcessingIdentity } from "../../src/assets/processing-identity.js";
-import { modelPackAssets, modelPackFingerprint, modelSetFingerprint } from "../../src/assets/model-pack.js";
+import {
+  modelPackAssets, modelPackFingerprint, modelSetFingerprint, parseModelPackManifest,
+} from "../../src/assets/model-pack.js";
 import { parakeetChunkText } from "../../src/asr/parakeet/text.js";
 import type { AssetManifest, AssetRecord } from "../../src/assets/verify-assets.js";
 
@@ -88,4 +90,22 @@ it("把 Parakeet 词级结果映射成共享的块与时间戳结构", () => {
 it("拒绝不对齐的 Parakeet token 流", () => {
   expect(() => parakeetChunkText({ tokens: [" a", " b"], timestamps: [0] }, 1_000))
     .toThrow(/timestamps do not align/);
+});
+
+it("accepts a parakeet model pack manifest", () => {
+  const contents = {
+    schemaVersion: 2 as const,
+    packKind: "parakeet" as const,
+    modelSetFingerprint: modelPackFingerprint(manifest, "parakeet"),
+    compatibilityFingerprint: modelSetFingerprint(manifest),
+    assets: modelPackAssets(manifest, "parakeet").map(({ id, kind, relativePath }) => ({
+      id, kind, relativePath, byteLength: 1, sha256: SHA,
+    })),
+    materials: [
+      { relativePath: "LICENSE", byteLength: 1, sha256: SHA },
+      { relativePath: "THIRD_PARTY_NOTICES.md", byteLength: 1, sha256: SHA },
+    ],
+  };
+  const parsed = parseModelPackManifest(Buffer.from(JSON.stringify(contents)), manifest);
+  expect(parsed.packKind).toBe("parakeet");
 });

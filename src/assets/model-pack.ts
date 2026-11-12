@@ -183,7 +183,7 @@ function parseContents(value: unknown): ModelPackManifest {
     !hasExactKeys(value, keys) ||
     (value.schemaVersion !== 1 && value.schemaVersion !== 2) ||
     (value.schemaVersion === 2 &&
-      ((value.packKind !== "base" && value.packKind !== "punctuation") ||
+      ((value.packKind !== "base" && value.packKind !== "parakeet" && value.packKind !== "punctuation") ||
       typeof value.compatibilityFingerprint !== "string" ||
       !/^[0-9a-f]{64}$/u.test(value.compatibilityFingerprint))) ||
     typeof value.modelSetFingerprint !== "string" ||
