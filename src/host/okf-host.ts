@@ -126,7 +126,15 @@ export function installOkfHost(context: Context, options: OkfHostOptions): OkfHo
     logger: (line) => { context.logger("dsh-asr").info(line); },
   });
   const repository = withTranscriptCommitHook(options.repository, {
-    onCommitted: (meetingId) => { startOkfIngestion(service, options.settings, meetingId); },
+    onCommitted: (meetingId) => {
+      const record = options.repository.getMeeting(meetingId);
+      startOkfIngestion(service, {
+        settings: options.settings,
+        ...(record?.committedStatus === null || record?.committedStatus === undefined
+          ? {}
+          : { committedStatus: record.committedStatus }),
+      }, meetingId);
+    },
   });
   const definition = createAsrIngestCommand({
     directory: () => options.settings().directory,
@@ -158,6 +166,9 @@ export function installOkfHost(context: Context, options: OkfHostOptions): OkfHo
     service,
     hasCommand,
     async dispose(): Promise<void> {
+      // Abort in-flight ingestions first: closing the connection underneath a
+      // running attempt would strand its row in `running` forever.
+      await service.shutdown().catch(() => undefined);
       database.close();
     },
   };

@@ -12,17 +12,22 @@
  * journal plus the `index.lock` retry path cover concurrent host processes.
  */
 
-import { realpath } from "node:fs/promises";
+import { realpathSync } from "node:fs";
 import { resolve } from "node:path";
 
 export interface OkfBundleLock {
   runExclusive<T>(root: string, task: () => Promise<T>): Promise<T>;
 }
 
-async function lockKey(root: string): Promise<string> {
+/**
+ * Queue position must follow call order, so the key is resolved synchronously:
+ * an awaited `realpath` would let a later caller join the queue first. Symlinked
+ * aliases of one bundle therefore share a single FIFO chain.
+ */
+function lockKey(root: string): string {
   const absolute = resolve(root);
   try {
-    return await realpath(absolute);
+    return realpathSync(absolute);
   } catch {
     // The bundle may not exist yet (initialise runs before the first ingestion);
     // the resolved absolute path is still a stable key then.
@@ -35,7 +40,7 @@ export function createOkfBundleLock(): OkfBundleLock {
 
   return {
     async runExclusive<T>(root: string, task: () => Promise<T>): Promise<T> {
-      const key = await lockKey(root);
+      const key = lockKey(root);
       const previous = tails.get(key) ?? Promise.resolve();
       let release: () => void = () => undefined;
       const held = new Promise<void>((resolveHeld) => {

@@ -32,6 +32,11 @@ export interface OkfIngestionRepository {
   ): OkfIngestionRecord | undefined;
   findLatestForMeeting(meetingId: string): OkfIngestionRecord | undefined;
   listForMeeting(meetingId: string, limit: number): readonly OkfIngestionRecord[];
+  /**
+   * Attempts left in `running` state. A single host owns a bundle, so any such
+   * row after startup was interrupted and can be closed as failed.
+   */
+  listRunning(limit: number): readonly OkfIngestionRecord[];
 }
 
 class SqliteOkfIngestionRepository implements OkfIngestionRepository {
@@ -136,6 +141,18 @@ class SqliteOkfIngestionRepository implements OkfIngestionRepository {
       ORDER BY started_at_ms DESC, attempt DESC
       LIMIT ?
     `).all(meetingId, limit).map(okfIngestionRecordFromRow));
+  }
+
+  listRunning(limit: number): readonly OkfIngestionRecord[] {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAX_LIST_LIMIT) {
+      throw new MeetingRepositoryError("INVALID_INPUT", "Pagination limit is invalid");
+    }
+    return inReadOperation(() => this.database.prepare(`
+      SELECT * FROM okf_ingestion
+      WHERE state = 'running'
+      ORDER BY started_at_ms ASC
+      LIMIT ?
+    `).all(limit).map(okfIngestionRecordFromRow));
   }
 
   private requireMeeting(meetingId: string): void {

@@ -171,10 +171,10 @@ describe.skipIf(!gitAvailable())("okf git transaction", () => {
       });
     });
 
-    it("rejects labels with characters outside [a-z0-9@._-]", async () => {
+    it("rejects labels with characters outside [a-z0-9@._ -]", async () => {
       const root = await createCommittedBundle({ "index.md": "# bundle\n" });
 
-      for (const label of ["ingest 1111@v1", "Ingest@v1", "ingest/1111@v1", ""]) {
+      for (const label of ["Ingest@v1", "ingest/1111@v1", "ingest\n1111@v1", ""]) {
         await expect(transaction.begin({ root, label, nowMs: NOW_MS })).rejects.toMatchObject({
           name: "OkfError",
           code: "OKF_GIT_FAILED",

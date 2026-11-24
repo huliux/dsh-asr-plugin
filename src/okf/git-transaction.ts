@@ -43,7 +43,7 @@ const GIT_PREFIX: readonly string[] = [
   "-c", "core.hooksPath=",
 ];
 
-const LABEL_PATTERN = /^[a-z0-9@._-]+$/u;
+const LABEL_PATTERN = /^[a-z0-9@._ -]+$/u;
 const MAX_LABEL_LENGTH = 256;
 const COMMIT_ID_PATTERN = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u;
 const FOREIGN_LOCK_PATTERN = /index\.lock/u;
@@ -111,6 +111,8 @@ interface JournalRecord {
 interface ParsedJournal {
   readonly label: string;
   readonly baseline: Baseline;
+  /** Process that wrote the journal, so a live owner is never rolled back. */
+  readonly pid: number;
 }
 
 interface RepositoryContext {
@@ -207,10 +209,19 @@ async function syncDirectory(path: string): Promise<void> {
   }
 }
 
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return isErrnoCode(error, "EPERM");
+  }
+}
+
 function assertLabel(label: string): void {
   if (label.length === 0 || label.length > MAX_LABEL_LENGTH || !LABEL_PATTERN.test(label)) {
     // The raw label may be derived from the transcript, so it is never echoed.
-    throw new OkfError("OKF_GIT_FAILED", "ingestion label must match [a-z0-9@._-]+");
+    throw new OkfError("OKF_GIT_FAILED", "ingestion label must match [a-z0-9@._ -]+");
   }
 }
 
@@ -219,14 +230,16 @@ function parseJournal(value: unknown): ParsedJournal | undefined {
   const label = value["label"];
   const kind = value["baselineKind"];
   const sha = value["baselineSha"];
+  const pid = value["pid"];
   if (typeof label !== "string" || label === "") return undefined;
+  const owner = typeof pid === "number" && Number.isSafeInteger(pid) && pid > 0 ? pid : 0;
   if (kind === "commit") {
     if (typeof sha !== "string" || !isCommitId(sha)) return undefined;
-    return { label, baseline: { kind: "commit", sha } };
+    return { label, baseline: { kind: "commit", sha }, pid: owner };
   }
   if (kind === "empty-tree") {
     if (sha !== null) return undefined;
-    return { label, baseline: { kind: "empty-tree", sha: null } };
+    return { label, baseline: { kind: "empty-tree", sha: null }, pid: owner };
   }
   return undefined;
 }
@@ -490,6 +503,14 @@ export function createOkfGitTransaction(port: OkfGitPort): OkfGitTransaction {
   ): Promise<OkfGitJournalRecovery | undefined> {
     const journal = await readJournal(gitDir);
     if (journal === undefined) return undefined;
+    if (journal.pid !== 0 && journal.pid !== process.pid && isProcessAlive(journal.pid)) {
+      // Another host is mid-ingestion in this bundle. Rolling its worktree back
+      // would destroy work this process cannot see, so wait for it instead.
+      throw new OkfError(
+        "OKF_BUSY",
+        "another process is ingesting into this Open knowledge base",
+      );
+    }
     try {
       await restoreBaseline(realRoot, journal.baseline, gitDir, signal, true);
     } catch (error) {
@@ -504,6 +525,28 @@ export function createOkfGitTransaction(port: OkfGitPort): OkfGitTransaction {
       );
     }
     return { label: journal.label };
+  }
+
+  /**
+   * Reads the new HEAD and clears the journal. Both are bookkeeping: the commit
+   * already landed, so a failure here is reported as an unknown id, never as a
+   * failed ingestion.
+   */
+  async function committedSha(
+    realRoot: string,
+    gitDir: string,
+    signal: AbortSignal | undefined,
+  ): Promise<string> {
+    let sha = "";
+    try {
+      const head = await gitOk(["rev-parse", "HEAD"], realRoot, signal, "rev-parse HEAD");
+      const value = head.stdout.trim();
+      if (isCommitId(value)) sha = value;
+    } catch {
+      sha = "";
+    }
+    await removeJournal(gitDir).catch(() => undefined);
+    return sha;
   }
 
   function createSession(
@@ -525,20 +568,14 @@ export function createOkfGitTransaction(port: OkfGitPort): OkfGitTransaction {
         try {
           await gitOk(["add", "-A"], realRoot, signal, "add");
           await gitOk(["commit", "--no-verify", "-m", label], realRoot, signal, "commit");
-          const head = await gitOk(["rev-parse", "HEAD"], realRoot, signal, "rev-parse HEAD");
-          const sha = head.stdout.trim();
-          if (!isCommitId(sha)) {
-            throw new OkfError("OKF_GIT_FAILED", "git rev-parse HEAD returned an unexpected value");
-          }
-          await removeJournal(gitDir);
+          // The commit object exists from here on, so the transaction is
+          // irreversible: a later failure must not roll the worktree back.
           state = "committed";
-          committed = { commit: sha };
-          return committed;
         } catch (error) {
           if (signal !== undefined && signal.aborted) {
             // An aborted attempt must not leave its partial worktree behind.
             try {
-              await restoreBaseline(realRoot, baseline, gitDir, undefined, false);
+              await restoreBaseline(realRoot, baseline, gitDir, undefined, true);
             } catch (rollbackError) {
               throw new OkfError(
                 "OKF_GIT_FAILED",
@@ -551,6 +588,8 @@ export function createOkfGitTransaction(port: OkfGitPort): OkfGitTransaction {
           }
           throw error;
         }
+        committed = { commit: await committedSha(realRoot, gitDir, signal) };
+        return committed;
       },
 
       async rollback(): Promise<void> {
@@ -561,7 +600,9 @@ export function createOkfGitTransaction(port: OkfGitPort): OkfGitTransaction {
         // Cleanup must still run when the caller aborted: the abort signal only
         // orders the attempt's own git calls.
         const cleanupSignal = signal !== undefined && signal.aborted ? undefined : signal;
-        await restoreBaseline(realRoot, baseline, gitDir, cleanupSignal, false);
+        // A failed restore keeps the journal: without it the dirty worktree has
+        // no rollback target left and the next ingestion would commit the debris.
+        await restoreBaseline(realRoot, baseline, gitDir, cleanupSignal, true);
         state = "rolled-back";
       },
     };

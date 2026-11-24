@@ -36,13 +36,23 @@ export function withTranscriptCommitHook(
   });
 }
 
+export interface StartOkfIngestionOptions {
+  readonly settings: () => { readonly directory: string; readonly ingest: boolean };
+  /**
+   * Committed status of the version that just landed. An empty transcript has
+   * nothing to summarise, so it must not start a job that can only fail.
+   */
+  readonly committedStatus?: "completed" | "empty" | "partial";
+}
+
 /** Starts ingestion for a committed version when the settings allow it. */
 export function startOkfIngestion(
   service: OkfIngestionService,
-  settings: () => { readonly directory: string; readonly ingest: boolean },
+  options: StartOkfIngestionOptions,
   meetingId: string,
 ): void {
-  const current = settings();
+  if (options.committedStatus === "empty") return;
+  const current = options.settings();
   if (current.directory.trim() === "" || current.ingest !== true) return;
-  service.start({ meetingId });
+  service.start({ meetingId, skipIfSucceeded: true });
 }

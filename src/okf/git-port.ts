@@ -1,4 +1,5 @@
 import type { Context } from "@deepseek-ai/cordis";
+import type { SubprocessHandle } from "@deepseek-ai/dsh-subprocess";
 
 import { OkfError, type OkfGitPort, type OkfGitResult } from "./contracts.js";
 
@@ -18,25 +19,37 @@ export interface OkfGitPortOptions {
  * Runs git through the subprocess seam with an argv array and no shell, so no
  * value from a transcript, a commit label or a bundle path can be re-parsed as
  * shell syntax. The child environment is the harness-scrubbed parent env.
+ *
+ * `argv[0]` is the program, matching the subprocess seam; `executable` replaces
+ * it so a test can point the port at a stub without changing the call sites.
  */
 export function createOkfGitPort(context: Context, options: OkfGitPortOptions = {}): OkfGitPort {
-  const executable = options.executable ?? "git";
   const timeoutMs = options.timeoutMs ?? DEFAULT_GIT_TIMEOUT_MS;
   return {
     async run(argv, spec): Promise<OkfGitResult> {
+      if (argv.length === 0) {
+        throw new OkfError("OKF_GIT_FAILED", "git was invoked without a program name");
+      }
+      const program = options.executable ?? argv[0] ?? "";
+      const forwarded: readonly string[] = [program, ...argv.slice(1)];
       const bounded = spec.signal === undefined
         ? AbortSignal.timeout(timeoutMs)
         : AbortSignal.any([spec.signal, AbortSignal.timeout(timeoutMs)]);
-      const handle = context.subprocess.spawn({
-        argv: [executable, ...argv],
-        cwd: spec.cwd,
-        stdio: {
-          stdin: "ignore",
-          stdout: { maxBytes: MAX_STREAM_BYTES },
-          stderr: { maxBytes: MAX_STREAM_BYTES },
-        },
-        graceMs: 500,
-      });
+      let handle: SubprocessHandle;
+      try {
+        handle = context.subprocess.spawn({
+          argv: forwarded,
+          cwd: spec.cwd,
+          stdio: {
+            stdin: "ignore",
+            stdout: { maxBytes: MAX_STREAM_BYTES },
+            stderr: { maxBytes: MAX_STREAM_BYTES },
+          },
+          graceMs: 500,
+        });
+      } catch (error) {
+        throw new OkfError("OKF_GIT_FAILED", "git could not be started", { cause: error });
+      }
       try {
         if (!await handle.waitForExit(bounded)) {
           throw new OkfError("OKF_GIT_FAILED", "git did not finish in time");
@@ -49,7 +62,7 @@ export function createOkfGitPort(context: Context, options: OkfGitPortOptions = 
         };
       } catch (error) {
         if (error instanceof OkfError) throw error;
-        throw new OkfError("OKF_GIT_FAILED", "git could not be started", { cause: error });
+        throw new OkfError("OKF_GIT_FAILED", "git did not run to completion", { cause: error });
       } finally {
         await handle.waitForExit(AbortSignal.timeout(1_000)).catch(() => false);
         handle.terminate();

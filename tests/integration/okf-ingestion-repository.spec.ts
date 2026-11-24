@@ -284,3 +284,38 @@ it("rejects invalid keys, unknown meetings and unfinished attempts", async () =>
   expect(ingestion.findAttempt(MEETING_ID, 9, directory)).toBeUndefined();
   expect(ingestion.findLatestForMeeting(OTHER_MEETING_ID)).toBeUndefined();
 });
+
+it("lists only attempts still marked running", async () => {
+  const { ingestion, directory } = await createFixture();
+
+  expect(ingestion.listRunning(10)).toEqual([]);
+
+  ingestion.beginAttempt({
+    meetingId: MEETING_ID,
+    transcriptVersion: 1,
+    directory,
+    startedAtMs: 1_000,
+  });
+  ingestion.beginAttempt({
+    meetingId: MEETING_ID,
+    transcriptVersion: 2,
+    directory,
+    startedAtMs: 2_000,
+  });
+  ingestion.beginAttempt({
+    meetingId: MEETING_ID,
+    transcriptVersion: 3,
+    directory,
+    startedAtMs: 3_000,
+  });
+  ingestion.finishAttempt({
+    meetingId: MEETING_ID,
+    transcriptVersion: 3,
+    directory,
+    state: "succeeded",
+    finishedAtMs: 4_000,
+  });
+
+  expect(ingestion.listRunning(10).map((record) => record.transcriptVersion)).toEqual([1, 2]);
+  expect(captureError(() => ingestion.listRunning(0))).toMatchObject({ code: "INVALID_INPUT" });
+});

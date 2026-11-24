@@ -80,6 +80,23 @@ indexes and never writes summaries from memory. When the host cannot answer, the
 probe is optimistic: a genuinely missing skill fails the child and the whole
 transaction rolls back.
 
+## Re-running ingestion
+
+Automatic ingestion skips a version that already ingested successfully, so a
+duplicate trigger costs nothing. A manual `/asr-ingest` always runs, which is how
+a page is refreshed after the model configuration or the prompt changes.
+
+## Known limitations
+
+- The transcript copy records the meeting's last-updated time as its committed
+  time, so a metadata-only edit (a rename, for example) rewrites that copy on the
+  next ingestion even when the transcript itself did not change.
+- The bundle lock is in-process. A second host sharing the same folder is stopped
+  by the journal owner check rather than by a mutual-exclusion file, so it reports
+  `OKF_BUSY` instead of queueing.
+- Nested Git repositories inside the bundle make `git clean -fd` refuse; ingestion
+  then fails and the worktree is left for manual inspection.
+
 ## `/asr-ingest`
 
 Manual (re-)ingestion:
