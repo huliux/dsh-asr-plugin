@@ -1,4 +1,5 @@
 import { decodeProcessingIdentity } from "./processing-identity.js";
+import type { OkfIngestionRecord, OkfIngestionState } from "../okf/contracts.js";
 import type {
   CommittedStatus,
   MeetingOrigin,
@@ -86,5 +87,34 @@ export function parseSegmentRow(value: unknown): TranscriptSegment {
     endMs: requireInteger(row.end_ms, "end_ms"),
     speakerLabel: requireString(row.speaker_label, "speaker_label"),
     text: requireString(row.text, "text"),
+  };
+}
+
+export function okfIngestionRecordFromRow(value: unknown): OkfIngestionRecord {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("Invalid OKF ingestion row");
+  }
+  const row = value as Record<string, unknown>;
+  const state: OkfIngestionState = enumValue(
+    row.state,
+    ["running", "succeeded", "failed"],
+    "state",
+  );
+  return {
+    meetingId: requireString(row.meeting_id, "meeting_id"),
+    transcriptVersion: requireInteger(row.transcript_version, "transcript_version"),
+    directory: requireString(row.directory, "directory"),
+    state,
+    attempt: requireInteger(row.attempt, "attempt"),
+    startedAtMs: requireInteger(row.started_at_ms, "started_at_ms"),
+    ...(row.finished_at_ms === null
+      ? {}
+      : { finishedAtMs: requireInteger(row.finished_at_ms, "finished_at_ms") }),
+    ...(row.error_code === null
+      ? {}
+      : { errorCode: requireString(row.error_code, "error_code") }),
+    ...(row.error_message === null
+      ? {}
+      : { errorMessage: requireString(row.error_message, "error_message") }),
   };
 }

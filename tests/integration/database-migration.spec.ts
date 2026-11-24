@@ -9,7 +9,7 @@ import {
   openMeetingRepository,
   type MeetingRepository,
 } from "../../src/storage/meeting-repository.js";
-import { SCHEMA_V2_SQL, SCHEMA_V3_SQL } from "../../src/storage/schema.js";
+import { SCHEMA_V2_SQL, SCHEMA_V3_SQL, SCHEMA_V4_SQL } from "../../src/storage/schema.js";
 
 const V1_SCHEMA_URL = new URL("../fixtures/storage/schema-v1.sql", import.meta.url);
 const MEETING_ID = "00000000-0000-4000-8000-000000000001";
@@ -158,7 +158,7 @@ it("打开 v2 数据库后无损增加 nullable 录音始止字段", async () =>
   repositories.splice(repositories.indexOf(repository), 1);
   const database = new DatabaseSync(filename);
   const version = database.prepare("PRAGMA user_version").get() as Record<string, unknown>;
-  expect(version.user_version).toBe(4);
+  expect(version.user_version).toBe(5);
   expect(database.prepare("SELECT segment_pk FROM segments").get())
     .toEqual({ segment_pk: 51 });
   expect(() => database.prepare(`
@@ -176,7 +176,7 @@ it("打开 v2 数据库后无损增加 nullable 录音始止字段", async () =>
   database.close();
 });
 
-it("新数据库直接创建 schema v4 与录音时间约束", async () => {
+it("新数据库直接创建 schema v5 与录音时间约束", async () => {
   const root = await mkdtemp(join(tmpdir(), "dsh-asr-schema-v3-"));
   const filename = join(root, "meetings.sqlite3");
   roots.push(root);
@@ -191,7 +191,7 @@ it("新数据库直接创建 schema v4 与录音时间约束", async () => {
   `).get() as Record<string, unknown> | undefined;
   database.close();
 
-  expect(version.user_version).toBe(4);
+  expect(version.user_version).toBe(5);
   expect(columns.map((column) => column.name)).toContain("origin");
   expect(columns.map((column) => column.name)).toContain("recording_started_at_ms");
   expect(columns.map((column) => column.name)).toContain("recording_ended_at_ms");
@@ -221,4 +221,70 @@ it("migrates v3 without guessing the historical processing mode", async () => {
   expect(repository.getMeetingPage({ meetingId: MEETING_ID }).transcript.segments[0]?.text)
     .toBe("legacy identity preserved");
   expect(repository.searchMeetings({ query: "identity preserved" }).items).toHaveLength(1);
+});
+
+it("migrates v4 to v5 without losing meetings and adds the ingestion table", async () => {
+  const root = await mkdtemp(join(tmpdir(), "dsh-asr-schema-v4-ingestion-"));
+  roots.push(root);
+  const filename = join(root, "meetings.sqlite3");
+  const database = new DatabaseSync(filename);
+  database.exec(SCHEMA_V4_SQL);
+  database.prepare(`INSERT INTO meetings (
+    meeting_id, origin, title, source_name, source_format, source_size_bytes,
+    duration_ms, status, committed_status, transcript_version, engine_fingerprint,
+    created_at_ms, updated_at_ms)
+    VALUES (?, 'import', 'v4 会议', 'v4.wav', 'wav', 2048, 1000,
+      'completed', 'completed', 1, ?, 1000, 2000)`).run(MEETING_ID, "a".repeat(64));
+  database.prepare(`INSERT INTO segments (segment_pk, meeting_id, transcript_version,
+    seq, start_ms, end_ms, speaker_label, text)
+    VALUES (71, ?, 1, 0, 0, 1000, 'Speaker A', 'v4 数据在 v5 中保留')`).run(MEETING_ID);
+  database.close();
+
+  const repository = openMeetingRepository(filename);
+  repositories.push(repository);
+  expect(repository.getMeeting(MEETING_ID)).toMatchObject({
+    meetingId: MEETING_ID,
+    origin: "import",
+    transcriptVersion: 1,
+    engineFingerprint: "a".repeat(64),
+  });
+  expect(repository.getMeetingPage({ meetingId: MEETING_ID }).transcript.segments)
+    .toMatchObject([{ seq: 0, text: "v4 数据在 v5 中保留" }]);
+  expect(repository.searchMeetings({ query: "v5 中保留" }).items).toHaveLength(1);
+
+  repository.close();
+  repositories.splice(repositories.indexOf(repository), 1);
+  const migrated = new DatabaseSync(filename);
+  const version = migrated.prepare("PRAGMA user_version").get() as Record<string, unknown>;
+  const table = migrated.prepare(`
+    SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'okf_ingestion'
+  `).get() as Record<string, unknown> | undefined;
+  const columns = migrated.prepare("PRAGMA table_info(okf_ingestion)")
+    .all() as Record<string, unknown>[];
+  const latestIndex = migrated.prepare(`
+    SELECT sql FROM sqlite_master
+    WHERE type = 'index' AND name = 'idx_okf_ingestion_latest'
+  `).get() as Record<string, unknown> | undefined;
+  expect(version.user_version).toBe(5);
+  expect(table?.sql).toContain("state IN ('running', 'succeeded', 'failed')");
+  expect(table?.sql).toContain("ON DELETE CASCADE");
+  expect(columns.map((column) => column.name)).toEqual([
+    "meeting_id",
+    "transcript_version",
+    "directory",
+    "state",
+    "attempt",
+    "started_at_ms",
+    "finished_at_ms",
+    "error_code",
+    "error_message",
+  ]);
+  expect(latestIndex?.sql).toContain("started_at_ms DESC");
+  // A migrated database can record an attempt straight away.
+  migrated.prepare(`INSERT INTO okf_ingestion (
+    meeting_id, transcript_version, directory, state, attempt, started_at_ms
+  ) VALUES (?, 1, '/tmp/bundle', 'running', 1, 3000)`).run(MEETING_ID);
+  expect(migrated.prepare("SELECT COUNT(*) AS total FROM okf_ingestion").get())
+    .toEqual({ total: 1 });
+  migrated.close();
 });
