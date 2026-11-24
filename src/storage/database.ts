@@ -6,7 +6,8 @@ import {
   MIGRATE_SCHEMA_V1_TO_V2_SQL,
   MIGRATE_SCHEMA_V2_TO_V3_SQL,
   MIGRATE_SCHEMA_V3_TO_V4_SQL,
-  SCHEMA_V4_SQL,
+  MIGRATE_SCHEMA_V4_TO_V5_SQL,
+  SCHEMA_V5_SQL,
   SCHEMA_VERSION,
 } from "./schema.js";
 
@@ -63,7 +64,7 @@ function migrateV2ToV3(database: DatabaseSync): void {
 function initializeSchema(database: DatabaseSync): void {
   let version = userVersion(database);
   if (version === 0) {
-    executeSchemaTransaction(database, SCHEMA_V4_SQL);
+    executeSchemaTransaction(database, SCHEMA_V5_SQL);
     return;
   }
   if (version === 1) {
@@ -77,6 +78,10 @@ function initializeSchema(database: DatabaseSync): void {
   }
   if (version === 3) {
     executeSchemaTransaction(database, MIGRATE_SCHEMA_V3_TO_V4_SQL);
+    version = userVersion(database);
+  }
+  if (version === 4) {
+    executeSchemaTransaction(database, MIGRATE_SCHEMA_V4_TO_V5_SQL);
     version = userVersion(database);
   }
   if (version === SCHEMA_VERSION) return;

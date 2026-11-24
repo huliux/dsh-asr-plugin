@@ -317,7 +317,7 @@ it("拒绝高于当前实现的数据库 schema", async () => {
   roots.push(root);
   const filename = join(root, "meetings.sqlite3");
   const database = new DatabaseSync(filename);
-  database.exec("PRAGMA user_version = 5");
+  database.exec("PRAGMA user_version = 6");
   database.close();
 
   expect(() => openMeetingRepository(filename)).toThrow(expect.objectContaining({

@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 const MEETINGS_V2_TEMPLATE = `
 CREATE TABLE __MEETINGS_TABLE__ (
@@ -220,3 +220,40 @@ PRAGMA user_version = 4;
 `;
 
 export const SCHEMA_V4_SQL = `${SCHEMA_V3_SQL}${MIGRATE_SCHEMA_V3_TO_V4_SQL}`;
+
+const OKF_INGESTION_SCHEMA_SQL = `
+CREATE TABLE okf_ingestion (
+  meeting_id          TEXT NOT NULL
+                      REFERENCES meetings(meeting_id) ON DELETE CASCADE,
+  transcript_version  INTEGER NOT NULL CHECK (transcript_version >= 0),
+  directory           TEXT NOT NULL
+                      CHECK (length(directory) BETWEEN 1 AND 1024),
+  state               TEXT NOT NULL
+                      CHECK (state IN ('running', 'succeeded', 'failed')),
+  attempt             INTEGER NOT NULL CHECK (attempt >= 1),
+  started_at_ms       INTEGER NOT NULL CHECK (started_at_ms > 0),
+  finished_at_ms      INTEGER
+                      CHECK (finished_at_ms IS NULL OR finished_at_ms > 0),
+  error_code          TEXT
+                      CHECK (error_code IS NULL OR length(error_code) BETWEEN 1 AND 100),
+  error_message       TEXT
+                      CHECK (error_message IS NULL OR length(error_message) BETWEEN 1 AND 500),
+  PRIMARY KEY (meeting_id, transcript_version, directory),
+  CHECK (state <> 'failed' OR error_code IS NOT NULL),
+  CHECK (state = 'running' OR finished_at_ms IS NOT NULL),
+  CHECK (
+    state <> 'running' OR
+    (finished_at_ms IS NULL AND error_code IS NULL AND error_message IS NULL)
+  )
+) STRICT;
+
+CREATE INDEX idx_okf_ingestion_latest
+ON okf_ingestion(meeting_id, started_at_ms DESC, attempt DESC);
+`;
+
+export const MIGRATE_SCHEMA_V4_TO_V5_SQL = `
+${OKF_INGESTION_SCHEMA_SQL}
+PRAGMA user_version = 5;
+`;
+
+export const SCHEMA_V5_SQL = `${SCHEMA_V4_SQL}${MIGRATE_SCHEMA_V4_TO_V5_SQL}`;

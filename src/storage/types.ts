@@ -1,5 +1,6 @@
 import type { ProcessingIdentity } from "../assets/processing-identity.js";
 import type { AudioSourceFormat } from "../audio/source-format.js";
+import type { OkfIngestionState } from "../okf/contracts.js";
 
 export type SourceFormat = AudioSourceFormat;
 export type MeetingOrigin = "import" | "recording";
@@ -259,4 +260,23 @@ export interface RecordDeletionFailureInput {
 export interface CompleteDeletionInput {
   readonly meetingId: string;
   readonly expectedVersion: number;
+}
+
+export interface BeginOkfIngestionInput {
+  readonly meetingId: string;
+  readonly transcriptVersion: number;
+  /** Absolute bundle root that receives the ingestion. */
+  readonly directory: string;
+  readonly startedAtMs: number;
+}
+
+export interface FinishOkfIngestionInput {
+  readonly meetingId: string;
+  readonly transcriptVersion: number;
+  /** Absolute bundle root that receives the ingestion. */
+  readonly directory: string;
+  readonly state: Exclude<OkfIngestionState, "running">;
+  readonly finishedAtMs: number;
+  readonly errorCode?: string;
+  readonly errorMessage?: string;
 }
