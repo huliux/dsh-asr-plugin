@@ -2,5 +2,12 @@
   "meta": {
     "title": "DSH ASR (macOS)",
     "description": "Local recording and meeting transcription. Apple Silicon Mac only."
+  },
+  "okf": {
+    "title": "Open knowledge base",
+    "folder": "Bundle folder",
+    "autoIngest": "Ingest new transcripts automatically",
+    "consent": "Turning this on makes the folder a Git repository, and every ingested meeting becomes one commit.",
+    "saveFailed": "Could not save Open knowledge base settings."
   }
 }

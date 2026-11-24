@@ -2,5 +2,12 @@
   "meta": {
     "title": "DSH ASR（macOS）",
     "description": "本地录音与会议转写，仅支持 Apple Silicon Mac。"
+  },
+  "okf": {
+    "title": "开放知识库",
+    "folder": "知识库文件夹",
+    "autoIngest": "自动收录新的转写",
+    "consent": "开启后，该文件夹会成为 Git 仓库，每次收录的会议都会生成一个提交。",
+    "saveFailed": "无法保存开放知识库设置。"
   }
 }
