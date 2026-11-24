@@ -18,6 +18,15 @@
   user's asset and never updates the source meeting.
 - **Transcription run**: one import or retranscription attempt and its immutable
   processing identity, distinct from the persistent meeting.
+- **Open knowledge base (OKF) bundle**: a user-owned folder of OKF pages derived
+  from committed transcripts. It is never a fact source: committed text stays
+  authoritative and the bundle is rebuilt from it.
+- **Ingestion**: one transaction that turns one committed transcript version into
+  bundle pages and exactly one Git commit. It is not a transcript projection.
+- **Ingestion attempt**: the recorded lifecycle of one ingestion for one meeting
+  and transcript version, distinct from the transcript version it read.
+- **Rollup**: a generated `index.md` listing meetings, action items or deadlines.
+  The plugin owns it; hand edits are replaced on the next ingestion.
 - **Recording session**: one start-to-stop/cancel/failure lifecycle with track state
   and temporary draft, distinct from a DSH session.
 - **DSH session / workspace**: host-owned Agent conversation and workspace context;

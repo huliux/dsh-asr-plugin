@@ -62,6 +62,12 @@ session work root. Workers do not use network or SQLite.
 Product child processes use DSH Subprocess. The signed Helper owns capture,
 macOS permission interaction, chunks and watchdogs.
 
+Open knowledge base ingestion is host code plus one child Agent. `src/okf/contracts.ts`
+holds the shared types and ports; storage keeps attempt state in `okf_ingestion`;
+`src/okf/git-transaction.ts` makes one ingestion one commit; `src/host/okf-host.ts`
+wires the slices into `apply`. Bundle writes use `node:fs` from host code because
+the child Agent's workspace is the bundle itself. See [okf](okf.md).
+
 Meeting references contain explicit IDs in individual messages. Transcript
 projections read a fixed version with stable cursors. Exports are deterministic
 derivatives of committed text and require host approval for file writes.
