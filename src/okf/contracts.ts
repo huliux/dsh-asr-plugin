@@ -17,6 +17,7 @@ export type OkfErrorCode =
   | "OKF_GIT_FAILED"
   | "OKF_BUSY"
   | "OKF_JOURNAL_UNCLOSED"
+  | "OKF_NO_TRANSCRIPT"
   | "CANCELLED_BY_USER";
 
 export class OkfError extends Error {

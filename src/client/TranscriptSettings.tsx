@@ -22,7 +22,7 @@ export interface OkfSettingsValues {
 /**
  * Persistence surface for the Open knowledge base section. A host that keeps
  * these settings outside the `dsh-asr` Config schema passes its own binding
- * instead of relying on the default `okf_directory` / `okf_auto_ingest` keys.
+ * instead of relying on the default `okf_directory` / `okf_ingest` keys.
  */
 export interface OkfSettingsBinding {
   readonly directory: string;
@@ -42,7 +42,7 @@ function okfAccepted(value: unknown): OkfSettingsValues {
   if (typeof value !== "object" || value === null) return { directory: "", autoIngest: true };
   const fields = value as Record<string, unknown>;
   const directory = fields.okf_directory;
-  const autoIngest = fields.okf_auto_ingest;
+  const autoIngest = fields.okf_ingest;
   return {
     directory: typeof directory === "string" ? directory : "",
     autoIngest: typeof autoIngest === "boolean" ? autoIngest : true,
@@ -175,7 +175,7 @@ export function TranscriptSettings({ form, rpc, t, okf }: Props) {
     try {
       return await form.mutate([
         { op: "set", path: ["okf_directory"], value: next.directory },
-        { op: "set", path: ["okf_auto_ingest"], value: next.autoIngest },
+        { op: "set", path: ["okf_ingest"], value: next.autoIngest },
       ], form.state.revision);
     } catch {
       return false;

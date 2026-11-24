@@ -60,6 +60,7 @@
     "SUPPORT.md",
     "SECURITY.md",
     "screenshots.json",
+    "assets/prompts",
     "assets/screenshots",
     "CONTEXT.md",
     "docs/model-assets.md",
