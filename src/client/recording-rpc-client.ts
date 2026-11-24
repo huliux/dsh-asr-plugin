@@ -298,4 +298,12 @@ export class RecordingRpcClient {
     if (typeof value !== "string" || !value.startsWith("/")) throw new Error("INVALID_RESPONSE");
     return value;
   }
+
+  /** Resolves the Open knowledge base folder the user picked, or null when cancelled. */
+  async chooseOkfDirectory(signal?: AbortSignal): Promise<string | null> {
+    const value = await call(this.rpc, "okf/choose-directory", {}, signal);
+    if (value === null) return null;
+    if (typeof value !== "string" || !value.startsWith("/")) throw new Error("INVALID_RESPONSE");
+    return value;
+  }
 }

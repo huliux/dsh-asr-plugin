@@ -332,11 +332,16 @@ export async function apply(context: Context, config: ParsedConfig): Promise<voi
             (proxyUrl.trim() ? "http" : "mirror") };
       } });
     lifetime.downloads = downloads;
+    const directoryPicker = createMacDirectoryPicker({ subprocess: context.subprocess });
     const transcripts = createTranscriptExportControl({
       directory: () => readVolatile<string>(effectiveConfig<ParsedConfig>(context).transcript_directory) ?? "",
       meeting: application,
-      picker: createMacDirectoryPicker({ subprocess: context.subprocess }),
+      picker: directoryPicker,
       pickerPrompt: () => "Choose a folder for exported transcripts",
+    });
+    const chooseOkfDirectory = (signal?: AbortSignal): Promise<string | null> => directoryPicker.choose({
+      prompt: "Choose a folder for the Open knowledge base",
+      ...(signal === undefined ? {} : { signal }),
     });
     context.inject(["connection", "webServer"], (webContext) => {
       const connection = recordingHttpConnection(webContext.connection, webContext.get("webServer") as RecordingWebServer);
@@ -344,7 +349,7 @@ export async function apply(context: Context, config: ParsedConfig): Promise<voi
       const removeRpc = registerRecordingHostRpc(connection, application, signal => readModelSettings(
         { dataRoot: paths.dataRoot, packageRoot: PACKAGE_ROOT, engine: selectedEngine(context), signal },
       ), downloads, recording.permissions, signal => application.prepareRecording(signal), transcripts,
-      recording.devices);
+      recording.devices, chooseOkfDirectory);
       webContext.effect(() => removeRpc, "dsh-asr: recording client RPC");
     });
   } catch (error) {

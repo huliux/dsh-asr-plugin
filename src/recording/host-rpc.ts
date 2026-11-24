@@ -134,9 +134,14 @@ export function registerRecordingHostRpc(
   prepareModels?: (signal: AbortSignal) => Promise<void>,
   transcripts?: TranscriptExportControl,
   devices?: AudioDeviceService,
+  chooseOkfDirectory?: (signal?: AbortSignal) => Promise<string | null>,
 ): () => Promise<void> {
   return connection.rpc.handle(RECORDING_RPC_CHANNEL, async (endpoint, payload, signal) => {
     try {
+      if (endpoint === "okf/choose-directory" && chooseOkfDirectory !== undefined) {
+        emptyPayload(payload);
+        return { ok: true, value: await chooseOkfDirectory(signal) };
+      }
       if (endpoint === "models/prepare" && prepareModels !== undefined) {
         emptyPayload(payload);
         await prepareModels(signal);

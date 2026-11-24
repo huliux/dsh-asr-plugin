@@ -18,6 +18,7 @@ export const RECORDING_RPC_ENDPOINTS = [
   "devices/list",
   "transcripts/export",
   "transcripts/choose-directory",
+  "okf/choose-directory",
 ] as const;
 
 export type RecordingRpcEndpoint = (typeof RECORDING_RPC_ENDPOINTS)[number];

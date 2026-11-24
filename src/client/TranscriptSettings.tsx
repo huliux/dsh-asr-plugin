@@ -136,7 +136,7 @@ export function TranscriptSettings({ form, rpc, t, okf }: Props) {
     setPicking(true);
     setFailed(false);
     try {
-      const result = await callRecordingRpc(rpc, "transcripts/choose-directory", {});
+      const result = await callRecordingRpc(rpc, "okf/choose-directory", {});
       if (result.ok && typeof result.value === "string") setDraft(result.value);
       else if (!result.ok && result.error.message !== "CANCELLED_BY_USER") setFailed(true);
     } catch {
@@ -164,7 +164,7 @@ export function TranscriptSettings({ form, rpc, t, okf }: Props) {
   };
 
   const chooseOkf = async (): Promise<string | null> => {
-    const result = await callRecordingRpc(rpc, "transcripts/choose-directory", {});
+    const result = await callRecordingRpc(rpc, "okf/choose-directory", {});
     if (result.ok && typeof result.value === "string") return result.value;
     if (!result.ok && result.error.message === "CANCELLED_BY_USER") return null;
     throw new Error("OKF_DIRECTORY_PICK_FAILED");
