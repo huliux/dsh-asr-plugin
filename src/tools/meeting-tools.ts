@@ -186,6 +186,17 @@ const MEETING_PAGE_SCHEMA = {
         },
       },
     },
+    okf: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        state: { type: "string", enum: ["running", "succeeded", "failed"], required: true },
+        transcript_version: { type: "integer", required: true },
+        attempt: { type: "integer", required: true },
+        finished_at: { ...NULLABLE_STRING_SCHEMA, required: true },
+        error_code: { ...NULLABLE_STRING_SCHEMA, required: true },
+      },
+    },
   },
 } as const;
 
@@ -424,9 +435,21 @@ function meetingValue(application: MeetingToolApplication, meeting: MeetingRecor
   };
 }
 
-function pageValue(application: MeetingToolApplication, page: MeetingPage) {
+function pageValue(
+  application: MeetingToolApplication,
+  options: MeetingToolOptions,
+  page: MeetingPage,
+) {
   const first = page.transcript.segments[0];
   const last = page.transcript.segments.at(-1);
+  const record = options.okfIngestionFor?.(page.meeting.meetingId) ?? null;
+  const okf = record === null ? null : {
+    state: record.state,
+    transcript_version: record.transcriptVersion,
+    attempt: record.attempt,
+    finished_at: record.finishedAt,
+    error_code: record.errorCode,
+  };
   const remainingSegments = page.transcript.available && last !== undefined
     ? page.transcript.totalSegments - last.seq - 1
     : 0;
@@ -458,6 +481,7 @@ function pageValue(application: MeetingToolApplication, page: MeetingPage) {
         rendered_bytes: null,
       } : null,
     },
+    ...(okf === null ? {} : { okf }),
   };
 }
 
@@ -588,7 +612,7 @@ function importTool(application: MeetingToolApplication): ToolDefinition {
   }));
 }
 
-function getTool(application: MeetingToolApplication): ToolDefinition {
+function getTool(application: MeetingToolApplication, options: MeetingToolOptions): ToolDefinition {
   return strictTool(defineTool({
     name: "meeting_get",
     description: "读取会议状态或已提交转写。分析正文优先 projection=agent，按返回的 next_cursor 续读；" +
@@ -612,7 +636,7 @@ function getTool(application: MeetingToolApplication): ToolDefinition {
           ...(args.cursor === undefined ? {} : { cursor: args.cursor }),
         }));
       }
-      return pageValue(application, application.getMeetingPage({
+      return pageValue(application, options, application.getMeetingPage({
         meetingId: args.meeting_id,
         ...(args.cursor === undefined ? {} : { cursor: args.cursor }),
         ...(args.limit === undefined ? {} : { limit: args.limit }),
@@ -816,12 +840,26 @@ function transcriptExportTool(application: MeetingToolApplication): ToolDefiniti
   }));
 }
 
+/** Latest Open knowledge base attempt, surfaced by `meeting_get` when configured. */
+export interface OkfIngestionSummary {
+  readonly state: "running" | "succeeded" | "failed";
+  readonly transcriptVersion: number;
+  readonly attempt: number;
+  readonly finishedAt: string | null;
+  readonly errorCode: string | null;
+}
+
+export interface MeetingToolOptions {
+  readonly okfIngestionFor?: (meetingId: string) => OkfIngestionSummary | null;
+}
+
 export function createMeetingTools(
   application: MeetingToolApplication,
+  options: MeetingToolOptions = {},
 ): readonly ToolDefinition[] {
   return [
     importTool(application),
-    getTool(application),
+    getTool(application, options),
     searchTool(application),
     retranscribeTool(application),
     deleteTool(application),
@@ -895,7 +933,8 @@ async function approvalDecision(
 export function registerMeetingTools(
   context: Context,
   application: MeetingToolApplication,
+  options: MeetingToolOptions = {},
 ): void {
-  for (const tool of createMeetingTools(application)) context.tools.register(tool);
+  for (const tool of createMeetingTools(application, options)) context.tools.register(tool);
   context.on("tools/pre-execute", approvalDecision);
 }

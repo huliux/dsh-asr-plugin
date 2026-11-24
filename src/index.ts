@@ -309,7 +309,19 @@ export async function apply(context: Context, config: ParsedConfig): Promise<voi
     context.effect(() => () => disposeHost(lifetime), "dsh-asr: application lifecycle");
     const reconciliation = await application.reconcileStartup();
     logReconciliation(context, reconciliation);
-    registerMeetingTools(context, application);
+    registerMeetingTools(context, application, {
+      okfIngestionFor: (meetingId) => {
+        const record = okf.service.state(meetingId);
+        if (record === undefined) return null;
+        return {
+          state: record.state,
+          transcriptVersion: record.transcriptVersion,
+          attempt: record.attempt,
+          finishedAt: record.finishedAtMs === undefined ? null : new Date(record.finishedAtMs).toISOString(),
+          errorCode: record.errorCode ?? null,
+        };
+      },
+    });
     const downloads = new ModelDownloadController({ dataRoot: paths.dataRoot, packageRoot: PACKAGE_ROOT,
       jobs: context.jobs, transport: context.subprocess, settings: () => {
         const current = effectiveConfig<ParsedConfig>(context);
